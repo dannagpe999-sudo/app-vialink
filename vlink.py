@@ -12,6 +12,7 @@ import json
 from openai import OpenAI
 import base64
 from pathlib import Path
+
 # ============================================================
 # CARGA DEL LOGO LOCAL
 # ============================================================
@@ -23,93 +24,135 @@ def cargar_logo_base64(ruta="assets/logo.png"):
         return None
 
 LOGO_B64 = cargar_logo_base64()
+
 # ============================================================
 # CONFIGURACIÓN
 # ============================================================
 st.set_page_config(
     page_title="Vialink · Rutas de Apodaca",
-    page_icon="🚌",
+    page_icon="assets/logo.png",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ============================================================
-# CSS GLOBAL
+# SESSION STATE — Tipo de transporte
 # ============================================================
-st.markdown("""
+if "tipo_transporte" not in st.session_state:
+    st.session_state.tipo_transporte = "Todos"
+
+TIPO_COLORES = {
+    "Todos":      {"bg": "#F2F6FC", "primary": "#0866E9", "accent": "#DBEAFE"},
+    "Camión":     {"bg": "#F0FDF4", "primary": "#15803D", "accent": "#DCFCE7"},
+    "Metro":      {"bg": "#EFF6FF", "primary": "#1D4ED8", "accent": "#DBEAFE"},
+    "Transmetro": {"bg": "#FEF2F2", "primary": "#DC2626", "accent": "#FEE2E2"},
+}
+
+_color = TIPO_COLORES[st.session_state.tipo_transporte]
+
+# ============================================================
+# CSS GLOBAL (con color dinámico según tipo)
+# ============================================================
+st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
+.stApp {{ background: {_color['bg']} !important; transition: background 0.4s ease; }}
+#MainMenu, footer, [data-testid="stToolbar"] {{ visibility: hidden; height: 0; }}
+[data-testid="stDecoration"] {{ display: none; }}
+[data-testid="stHeader"] {{ background: transparent; height: 0; }}
 
-html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-.stApp { background: #F2F6FC; }
-
-#MainMenu, footer, [data-testid="stToolbar"] { visibility: hidden; height: 0; }
-[data-testid="stDecoration"] { display: none; }
-[data-testid="stHeader"] { background: transparent; height: 0; }
-
-/* ============ SIDEBAR ============ */
 [data-testid="stSidebar"],
 section[data-testid="stSidebar"],
 [data-testid="stSidebarContent"],
 [data-testid="stSidebar"] > div,
 [data-testid="stSidebar"] > div:first-child,
-[data-testid="stSidebarUserContent"] {
+[data-testid="stSidebarUserContent"] {{
     background-color: #071B49 !important;
     background-image: none !important;
-}
-[data-testid="stSidebar"] * { color: #E6EDFF !important; }
-[data-testid="stSidebarCollapseButton"] button,
-[data-testid="stSidebarCollapsedControl"] button { color: #E6EDFF !important; }
+}}
+[data-testid="stSidebar"] * {{ color: #E6EDFF !important; }}
 
-/* ANCHO: 24vw ≈ 1/4 de la pantalla */
 [data-testid="stSidebar"],
-section[data-testid="stSidebar"] {
+section[data-testid="stSidebar"] {{
     width: 24vw !important;
     min-width: 260px !important;
     max-width: 400px !important;
-}
+}}
 [data-testid="stSidebar"] > div:first-child,
 [data-testid="stSidebarContent"],
-[data-testid="stSidebarUserContent"] {
+[data-testid="stSidebarUserContent"] {{
     width: 24vw !important;
     min-width: 260px !important;
     max-width: 400px !important;
-}
+}}
 
-/* Brand Vialink */
-.sidebar-brand {
+.sidebar-brand {{
     display: flex; flex-direction: column; align-items: flex-start;
     gap: 10px; padding: 20px 8px 26px 8px;
     border-bottom: 1px solid rgba(255,255,255,0.1);
-    margin-bottom: 22px;
-}
-.sidebar-brand .logo {
-    width: 250px; height: 250px;
-    background: linear-gradient(135deg, #0866E9, #0A75FF);
+    margin-bottom: 18px;
+}}
+.sidebar-brand .logo {{
+    width: 100px; height: 100px;
     border-radius: 16px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 34px;
-    box-shadow: 0 6px 22px rgba(8, 102, 233, 0.5);
-}
-.sidebar-brand h1 {
+    overflow: hidden;
+    background: transparent;
+}}
+.sidebar-brand h1 {{
     margin: 8px 0 0 0 !important;
     font-size: 38px !important;
     font-weight: 800 !important;
     color: #FFFFFF !important;
     letter-spacing: -1.5px !important;
     line-height: 1 !important;
-}
-.sidebar-brand p {
+}}
+.sidebar-brand p {{
     margin: 4px 0 0 0 !important;
     font-size: 14px !important;
     color: #8FA4CC !important;
     font-weight: 500 !important;
-}
+}}
 
-/* Botones del menú */
+.tipo-selector-label {{
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: #8FA4CC !important;
+    margin: 4px 0 8px 4px;
+}}
+[data-testid="stSidebar"] [data-testid="stRadio"] > label {{
+    display: none;
+}}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] {{
+    background: rgba(255,255,255,0.05);
+    padding: 6px; border-radius: 12px; gap: 4px;
+    display: flex; flex-direction: column;
+}}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label {{
+    padding: 10px 14px !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease;
+    font-weight: 500 !important; font-size: 14px !important;
+    color: #B8C5E0 !important;
+    cursor: pointer;
+}}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:hover {{
+    background: rgba(255,255,255,0.08);
+}}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"],
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) {{
+    background: {_color['primary']} !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] *,
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) * {{
+    color: #FFFFFF !important;
+}}
+
 [data-testid="stSidebar"] .stButton > button,
 [data-testid="stSidebar"] [data-testid="stButton"] > button,
-[data-testid="stSidebar"] button[kind="secondary"] {
+[data-testid="stSidebar"] button[kind="secondary"] {{
     width: 100% !important;
     background: transparent !important;
     color: #B8C5E0 !important;
@@ -123,28 +166,27 @@ section[data-testid="stSidebar"] {
     transition: all 0.2s ease;
     box-shadow: none !important;
     margin: 2px 0 !important;
-}
+}}
 [data-testid="stSidebar"] .stButton > button:hover,
 [data-testid="stSidebar"] [data-testid="stButton"] > button:hover,
-[data-testid="stSidebar"] button[kind="secondary"]:hover {
+[data-testid="stSidebar"] button[kind="secondary"]:hover {{
     background: rgba(255,255,255,0.08) !important;
     color: #FFFFFF !important;
-}
+}}
 [data-testid="stSidebar"] .stButton > button[kind="primary"],
-[data-testid="stSidebar"] button[kind="primary"] {
-    background: #0866E9 !important;
+[data-testid="stSidebar"] button[kind="primary"] {{
+    background: {_color['primary']} !important;
     color: #FFFFFF !important;
     box-shadow: 0 6px 20px rgba(8, 102, 233, 0.45) !important;
-}
-[data-testid="stSidebar"] button[kind="primary"]:hover {
-    background: #0A75FF !important;
-}
+}}
+[data-testid="stSidebar"] button[kind="primary"]:hover {{
+    opacity: 0.9;
+}}
 
-/* HERO BANNER */
-.hero-banner {
+.hero-banner {{
     position: relative;
     background:
-        linear-gradient(115deg, rgba(7,27,73,0.92) 0%, rgba(8,102,233,0.78) 100%),
+        linear-gradient(115deg, rgba(7,27,73,0.92) 0%, {_color['primary']}C7 100%),
         url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1800&q=80') center/cover;
     border-radius: 22px;
     padding: 48px 42px;
@@ -152,215 +194,229 @@ section[data-testid="stSidebar"] {
     margin-bottom: 26px;
     overflow: hidden;
     box-shadow: 0 20px 40px -20px rgba(7,27,73,0.5);
-}
-.hero-banner::before {
+    transition: background 0.4s ease;
+}}
+.hero-banner::before {{
     content: '';
     position: absolute; right: -80px; top: -80px;
     width: 320px; height: 320px;
-    background: radial-gradient(circle, rgba(8,102,233,0.55), transparent 70%);
+    background: radial-gradient(circle, {_color['primary']}99, transparent 70%);
     border-radius: 50%;
-}
-.hero-banner h1 { font-size: 34px; font-weight: 800; margin: 0 0 6px 0; letter-spacing: -0.5px; color: #FFFFFF; }
-.hero-banner p  { font-size: 16px; margin: 0; color: #D5E1FF; }
+}}
+.hero-banner h1 {{ font-size: 34px; font-weight: 800; margin: 0 0 6px 0; letter-spacing: -0.5px; color: #FFFFFF; }}
+.hero-banner p  {{ font-size: 16px; margin: 0; color: #D5E1FF; }}
 
-/* TARJETAS */
-.vl-card {
+.vl-card {{
     background: #FFFFFF;
     border-radius: 18px;
     padding: 20px 22px;
     box-shadow: 0 4px 20px -8px rgba(7, 27, 73, 0.12);
     border: 1px solid #E6EDFF;
     margin-bottom: 16px;
-}
-.vl-card h4 {
+}}
+.vl-card h4 {{
     margin: 0 0 12px 0; font-size: 14px; font-weight: 700;
     color: #071B49; display: flex; align-items: center; gap: 8px;
     text-transform: uppercase; letter-spacing: 0.4px;
-}
-.vl-card h3 { margin: 0 0 6px 0; font-size: 19px; font-weight: 700; color: #071B49; }
-.vl-card p  { margin: 4px 0; color: #4A5A78; font-size: 14px; }
-.vl-card .label { font-size: 11px; color: #8A97B0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-.vl-card .value { font-size: 22px; font-weight: 700; color: #071B49; margin-top: 2px; }
+}}
+.vl-card h3 {{ margin: 0 0 6px 0; font-size: 19px; font-weight: 700; color: #071B49; }}
+.vl-card p  {{ margin: 4px 0; color: #4A5A78; font-size: 14px; }}
+.vl-card .label {{ font-size: 11px; color: #8A97B0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }}
+.vl-card .value {{ font-size: 22px; font-weight: 700; color: #071B49; margin-top: 2px; }}
 
-.vl-pill {
-    display: inline-block; background: #E6EDFF; color: #0866E9;
+.vl-pill {{
+    display: inline-block; background: {_color['accent']}; color: {_color['primary']};
     padding: 5px 12px; border-radius: 100px;
     font-size: 12px; font-weight: 600; margin: 3px 6px 3px 0;
-}
-.vl-pill.green { background: #DCFCE7; color: #15803D; }
-.vl-pill.orange { background: #FFEDD5; color: #C2410C; }
-.vl-pill.blue { background: #DBEAFE; color: #1D4ED8; }
+}}
+.vl-pill.green {{ background: #DCFCE7; color: #15803D; }}
+.vl-pill.orange {{ background: #FFEDD5; color: #C2410C; }}
+.vl-pill.blue {{ background: #DBEAFE; color: #1D4ED8; }}
 
-.status-dot {
+.status-dot {{
     display: inline-block; width: 8px; height: 8px;
     background: #22C55E; border-radius: 50%; margin-right: 8px;
     box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
     animation: pulse 2s infinite;
-}
-@keyframes pulse {
-    0%, 100% { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); }
-    50%      { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.1); }
-}
+}}
+@keyframes pulse {{
+    0%, 100% {{ box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); }}
+    50%      {{ box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.1); }}
+}}
 
-/* TOPBAR */
-.topbar-loc, .topbar-prof {
+.topbar-loc, .topbar-prof {{
     display: flex; align-items: center; justify-content: center;
     height: 46px;
-    background: #F2F6FC;
+    background: #FFFFFF;
     border: 1px solid #E6EDFF;
     border-radius: 12px;
     color: #071B49; font-weight: 600; font-size: 13px; gap: 6px;
-}
-.topbar-prof {
-    background: linear-gradient(135deg, #0866E9, #0A75FF);
+}}
+.topbar-prof {{
+    background: linear-gradient(135deg, {_color['primary']}, {_color['primary']}DD);
     color: #FFFFFF; border: none; width: 46px;
     font-weight: 700; font-size: 16px;
-    box-shadow: 0 4px 14px rgba(8,102,233,0.3);
-}
+    box-shadow: 0 4px 14px {_color['primary']}4D;
+}}
 
-/* Inputs */
-[data-testid="stTextInput"] input {
+[data-testid="stTextInput"] input,
+[data-testid="stTextArea"] textarea {{
     background: #FFFFFF !important;
     border: 1px solid #E6EDFF !important;
     border-radius: 12px !important;
     padding: 12px 16px !important;
     font-size: 14px !important;
     color: #071B49 !important;
-    height: 46px;
-}
-[data-testid="stTextInput"] input:focus {
-    border-color: #0866E9 !important;
-    box-shadow: 0 0 0 3px rgba(8,102,233,0.15) !important;
-}
-[data-testid="stSelectbox"] > div > div {
+}}
+[data-testid="stTextInput"] input {{ height: 46px; }}
+[data-testid="stTextInput"] input:focus,
+[data-testid="stTextArea"] textarea:focus {{
+    border-color: {_color['primary']} !important;
+    box-shadow: 0 0 0 3px {_color['primary']}26 !important;
+}}
+[data-testid="stSelectbox"] > div > div {{
     background: #FFFFFF !important;
     border: 1px solid #E6EDFF !important;
     border-radius: 12px !important;
     color: #071B49 !important;
-}
+}}
 
-.section-title { font-size: 22px; font-weight: 800; color: #071B49; margin: 6px 0 14px 0; letter-spacing: -0.3px; }
+.section-title {{ font-size: 22px; font-weight: 800; color: #071B49; margin: 6px 0 14px 0; letter-spacing: -0.3px; }}
 
-/* Chat */
-.chat-bubble-user {
-    background: #0866E9; color: white;
+.chat-bubble-user {{
+    background: {_color['primary']}; color: white;
     padding: 12px 16px; border-radius: 16px 16px 4px 16px;
     margin: 8px 0 8px auto; max-width: 78%; font-size: 14px;
-    box-shadow: 0 4px 14px rgba(8,102,233,0.3);
-}
-.chat-bubble-ai {
+    box-shadow: 0 4px 14px {_color['primary']}4D;
+}}
+.chat-bubble-ai {{
     background: #FFFFFF; color: #071B49;
     padding: 12px 16px; border-radius: 16px 16px 16px 4px;
     margin: 8px auto 8px 0; max-width: 78%;
     border: 1px solid #E6EDFF; font-size: 14px;
-}
+}}
 
-/* Notificación */
-.notif-item {
+.notif-item {{
     background: #FFFFFF;
-    border-left: 4px solid #0866E9;
+    border-left: 4px solid {_color['primary']};
     border-radius: 12px;
     padding: 16px 18px;
     margin-bottom: 12px;
     box-shadow: 0 2px 10px -4px rgba(7,27,73,0.1);
-}
-.notif-item.warning { border-left-color: #F59E0B; }
-.notif-item.info    { border-left-color: #0866E9; }
-.notif-item h5 { margin: 0 0 4px 0; font-size: 14px; font-weight: 700; color: #071B49; }
-.notif-item p  { margin: 0; font-size: 13px; color: #4A5A78; }
-.notif-item .meta { font-size: 11px; color: #8A97B0; margin-top: 6px; }
+}}
+.notif-item.warning {{ border-left-color: #F59E0B; }}
+.notif-item.info    {{ border-left-color: {_color['primary']}; }}
+.notif-item h5 {{ margin: 0 0 4px 0; font-size: 14px; font-weight: 700; color: #071B49; }}
+.notif-item p  {{ margin: 0; font-size: 13px; color: #4A5A78; }}
+.notif-item .meta {{ font-size: 11px; color: #8A97B0; margin-top: 6px; }}
 
-.stButton > button[kind="primary"] {
-    background: #0866E9 !important;
+.stButton > button[kind="primary"] {{
+    background: {_color['primary']} !important;
     color: white !important;
     border-radius: 12px !important;
     font-weight: 600 !important;
     padding: 10px 20px !important;
     border: none !important;
-    box-shadow: 0 4px 14px rgba(8, 102, 233, 0.3) !important;
-}
-.stButton > button[kind="primary"]:hover { background: #0A75FF !important; }
+    box-shadow: 0 4px 14px {_color['primary']}4D !important;
+}}
+.stButton > button[kind="primary"]:hover {{ opacity: 0.9; }}
+
+.tipo-badge {{
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 100px;
+    background: {_color['accent']}; color: {_color['primary']};
+    font-weight: 700; font-size: 13px;
+}}
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================================
-# DATOS
+# DATOS — RUTAS (camiones)
 # ============================================================
 RUTAS = {
-    "A-3 · Circuito Contigo (Asturias - Cd. Natura)": {
-        "color": "#2563eb",
+    "1 · Directa Pilares Andalucía UTE": {
+        "color": "#22c55e",
         "paradas": [
-            {"nombre": "Asturias", "lat": 25.741, "lon": -100.188},
-            {"nombre": "Triana", "lat": 25.735, "lon": -100.195},
-            {"nombre": "Rincón de Galicia", "lat": 25.728, "lon": -100.203},
-            {"nombre": "Cd. Natura", "lat": 25.721, "lon": -100.211},
+            {"nombre": "Pilares", "lat": 25.81018, "lon": -100.25840},
+            {"nombre": "Andalucía", "lat": 25.780, "lon": -100.220},
+            {"nombre": "Apodaca Centro", "lat": 25.78027, "lon": -100.18790},
+            {"nombre": "UTE", "lat": 25.750, "lon": -100.200},
         ],
-        "municipios": "Apodaca", "horario": "05:00 - 09:00 / 17:00 - 21:00",
-        "frecuencia": "15 min", "longitud": "20.5 km", "duracion": "50 min", "tipo": "Circuito Contigo",
+        "municipios": "Apodaca", "horario": "05:00 - 23:00",
+        "frecuencia": "10-15 min", "longitud": "≈ 35 km", "duracion": "≈ 80 min", "tipo": "Directa",
     },
-    "A-8 · Circuito Contigo (Lomas de la Paz - Apodaca Centro)": {
-        "color": "#16a34a",
+    "41 · Directa Colinas Hospital Metropolitano": {
+        "color": "#22c55e",
         "paradas": [
-            {"nombre": "Lomas de la Paz", "lat": 25.755, "lon": -100.205},
-            {"nombre": "Pueblo Nuevo", "lat": 25.748, "lon": -100.198},
-            {"nombre": "Real Hacienda Huinalá", "lat": 25.740, "lon": -100.190},
-            {"nombre": "Rincón de Huinalá", "lat": 25.735, "lon": -100.185},
-            {"nombre": "Villa de San Carlos", "lat": 25.728, "lon": -100.180},
-            {"nombre": "Apodaca Centro", "lat": 25.720, "lon": -100.175},
+            {"nombre": "Colinas", "lat": 25.790, "lon": -100.210},
+            {"nombre": "Hospital Metropolitano", "lat": 25.73076, "lon": -100.19908},
         ],
-        "municipios": "Apodaca", "horario": "05:00 - 09:00 / 17:00 - 21:00",
-        "frecuencia": "20 min", "longitud": "21.5 km", "duracion": "60 min", "tipo": "Circuito Contigo",
+        "municipios": "Apodaca, San Nicolás", "horario": "05:00 - 23:00",
+        "frecuencia": "10 min", "longitud": "≈ 20 km", "duracion": "≈ 50 min", "tipo": "Directa",
     },
-    "A-14 · Circuito Contigo (Nuevo Amanecer - Fresnos)": {
-        "color": "#dc2626",
+    "105 · Alimentadora San Martín Metropolitano": {
+        "color": "#22c55e",
         "paradas": [
-            {"nombre": "Nuevo Amanecer", "lat": 25.760, "lon": -100.215},
-            {"nombre": "Santa Cecilia", "lat": 25.752, "lon": -100.208},
-            {"nombre": "Fresnos", "lat": 25.745, "lon": -100.200},
-            {"nombre": "Ex Hacienda San Francisco", "lat": 25.738, "lon": -100.192},
+            {"nombre": "San Martín", "lat": 25.750, "lon": -100.210},
+            {"nombre": "Hospital Metropolitano", "lat": 25.73076, "lon": -100.19908},
         ],
-        "municipios": "Apodaca", "horario": "05:00 - 09:00 / 17:00 - 21:00",
-        "frecuencia": "20 min", "longitud": "18 km", "duracion": "45 min", "tipo": "Circuito Contigo",
+        "municipios": "Apodaca, San Nicolás", "horario": "05:00 - 23:00",
+        "frecuencia": "10 min", "longitud": "≈ 12 km", "duracion": "≈ 35 min", "tipo": "Alimentadora",
     },
-    "Vistas del Río - Apodaca (Ruta directa)": {
-        "color": "#7c3aed",
+    "109 · Alimentadora Aeropuerto Exposición": {
+        "color": "#22c55e",
         "paradas": [
-            {"nombre": "Vistas del Río", "lat": 25.700, "lon": -100.250},
-            {"nombre": "Centro de Apodaca", "lat": 25.720, "lon": -100.175},
-            {"nombre": "Huinalá", "lat": 25.735, "lon": -100.190},
-            {"nombre": "El Sabinal", "lat": 25.745, "lon": -100.200},
+            {"nombre": "Aeropuerto", "lat": 25.778, "lon": -100.106},
+            {"nombre": "Exposición", "lat": 25.670, "lon": -100.330},
         ],
-        "municipios": "Apodaca, Juárez", "horario": "04:30 - 23:30",
-        "frecuencia": "10-15 min", "longitud": "46 km", "duracion": "90 min", "tipo": "Ruta directa",
+        "municipios": "Apodaca, Monterrey", "horario": "05:00 - 23:00",
+        "frecuencia": "15 min", "longitud": "≈ 25 km", "duracion": "≈ 60 min", "tipo": "Alimentadora",
     },
-    "219 · Provivienda - Tréboles": {
-        "color": "#ec4899",
+    "160 · Remanente Guadalupe Apodaca": {
+        "color": "#22c55e",
         "paradas": [
-            {"nombre": "Adolfo López Mateos (Terminal Grupo Trees)", "lat": 25.695, "lon": -100.215},
-            {"nombre": "Adolfo López Mateos (Soriana Las Quintas)", "lat": 25.700, "lon": -100.225},
-            {"nombre": "Adolfo López Mateos (Ruíz Cortines)", "lat": 25.708, "lon": -100.235},
-            {"nombre": "Pilastra (Adolfo López Mateos)", "lat": 25.712, "lon": -100.240},
-            {"nombre": "Pío XII (San Martín)", "lat": 25.715, "lon": -100.245},
-            {"nombre": "Río San Juan (Guadalajara)", "lat": 25.718, "lon": -100.238},
-            {"nombre": "México (Loma Redonda)", "lat": 25.720, "lon": -100.225},
-            {"nombre": "Guadalajara (Acapulco)", "lat": 25.723, "lon": -100.215},
-            {"nombre": "Guadalajara (Camino a Huinalá)", "lat": 25.726, "lon": -100.205},
-            {"nombre": "México (Comercial Treviño Apodaca)", "lat": 25.730, "lon": -100.195},
-            {"nombre": "Héctor Caballero (Arenal)", "lat": 25.735, "lon": -100.188},
-            {"nombre": "16 de Septiembre (Valle del Norte)", "lat": 25.738, "lon": -100.185},
-            {"nombre": "Miguel Alemán (Plaza Sendero La Fe)", "lat": 25.745, "lon": -100.190},
-            {"nombre": "Miguel Alemán (Plaza Las Américas)", "lat": 25.750, "lon": -100.195},
-            {"nombre": "Miguel Alemán (Parque Kalos Apodaca)", "lat": 25.755, "lon": -100.200},
-            {"nombre": "Colector (Florencia - Albania)", "lat": 25.760, "lon": -100.205},
+            {"nombre": "Guadalupe", "lat": 25.680, "lon": -100.250},
+            {"nombre": "Apodaca Centro", "lat": 25.78027, "lon": -100.18790},
+        ],
+        "municipios": "Guadalupe, Apodaca", "horario": "05:00 - 23:00",
+        "frecuencia": "10 min", "longitud": "≈ 22 km", "duracion": "≈ 55 min", "tipo": "Remanente",
+    },
+    "213 · Directa Soriana Sendero Capellanía": {
+        "color": "#22c55e",
+        "paradas": [
+            {"nombre": "Soriana Sendero", "lat": 25.76331, "lon": -100.19122},
+            {"nombre": "Capellanía", "lat": 25.750, "lon": -100.185},
+        ],
+        "municipios": "Apodaca", "horario": "05:00 - 23:00",
+        "frecuencia": "10 min", "longitud": "≈ 8 km", "duracion": "≈ 25 min", "tipo": "Directa",
+    },
+    "219 · Remanente Provivienda": {
+        "color": "#22c55e",
+        "paradas": [
+            {"nombre": "Provivienda", "lat": 25.700, "lon": -100.215},
+            {"nombre": "Tréboles", "lat": 25.760, "lon": -100.205},
         ],
         "municipios": "Apodaca, Guadalupe", "horario": "05:00 - 22:00",
-        "frecuencia": "8-12 min", "longitud": "28 km", "duracion": "75 min", "tipo": "Ruta urbana",
+        "frecuencia": "8-12 min", "longitud": "≈ 28 km", "duracion": "≈ 75 min", "tipo": "Remanente",
+    },
+    "527 · Troncal Vistas del Río Apodaca": {
+        "color": "#22c55e",
+        "paradas": [
+            {"nombre": "Vistas del Río", "lat": 25.700, "lon": -100.250},
+            {"nombre": "Monumento", "lat": 25.720, "lon": -100.230},
+            {"nombre": "Apodaca Centro", "lat": 25.78027, "lon": -100.18790},
+        ],
+        "municipios": "Apodaca, Juárez", "horario": "05:00 - 23:00",
+        "frecuencia": "10 min", "longitud": "≈ 30 km", "duracion": "≈ 80 min", "tipo": "Troncal",
     },
 }
 
+# ============================================================
+# METRO
+# ============================================================
 METRO = {
     "Línea 1 · Talleres / San Bernabé": {
-        "color": "#e11d48",
+        "color": "#1D4ED8",
         "estaciones": [
             {"nombre": "Talleres", "lat": 25.750, "lon": -100.350},
             {"nombre": "San Nicolás", "lat": 25.735, "lon": -100.320},
@@ -375,7 +431,7 @@ METRO = {
         "conexion_apodaca": "Conecta con rutas de Apodaca en Sendero y San Nicolás.",
     },
     "Línea 2 · Sendero / Gral. I. Zaragoza": {
-        "color": "#f97316",
+        "color": "#1D4ED8",
         "estaciones": [
             {"nombre": "Sendero", "lat": 25.720, "lon": -100.290},
             {"nombre": "San Nicolás", "lat": 25.735, "lon": -100.320},
@@ -387,7 +443,7 @@ METRO = {
         "conexion_apodaca": "Conecta con rutas de Apodaca en Sendero y San Nicolás.",
     },
     "Línea 3 · Hospital / Hospital Metropolitano": {
-        "color": "#0d9488",
+        "color": "#1D4ED8",
         "estaciones": [
             {"nombre": "Hospital", "lat": 25.685, "lon": -100.305},
             {"nombre": "Hospital Metropolitano (Apodaca)", "lat": 25.715, "lon": -100.210},
@@ -395,6 +451,95 @@ METRO = {
         "conexion_apodaca": "Llega directo a Apodaca en la estación Hospital Metropolitano.",
     },
 }
+
+# ============================================================
+# TRANSMETRO
+# ============================================================
+TRANSMETRO = {
+    "Transmetro L1 · Talleres - Centro": {
+        "color": "#DC2626",
+        "paradas": [
+            {"nombre": "Talleres", "lat": 25.750, "lon": -100.350},
+            {"nombre": "San Nicolás", "lat": 25.735, "lon": -100.320},
+            {"nombre": "Sendero", "lat": 25.720, "lon": -100.290},
+            {"nombre": "Universidad", "lat": 25.710, "lon": -100.280},
+            {"nombre": "Cuauhtémoc", "lat": 25.690, "lon": -100.310},
+            {"nombre": "Padre Mier", "lat": 25.680, "lon": -100.315},
+        ],
+        "municipios": "Monterrey, San Nicolás",
+        "horario": "05:00 - 23:00",
+        "frecuencia": "8 min",
+        "longitud": "≈ 20 km",
+        "duracion": "≈ 45 min",
+        "tipo": "Transmetro",
+    },
+    "Transmetro L2 · Lincoln - Centro": {
+        "color": "#DC2626",
+        "paradas": [
+            {"nombre": "Lincoln", "lat": 25.735, "lon": -100.280},
+            {"nombre": "Ruiz Cortines", "lat": 25.720, "lon": -100.300},
+            {"nombre": "Universidad", "lat": 25.710, "lon": -100.280},
+            {"nombre": "Padre Mier", "lat": 25.680, "lon": -100.315},
+        ],
+        "municipios": "Monterrey, San Nicolás",
+        "horario": "05:00 - 23:00",
+        "frecuencia": "10 min",
+        "longitud": "≈ 18 km",
+        "duracion": "≈ 40 min",
+        "tipo": "Transmetro",
+    },
+    "Transmetro L3 · Hospital Metropolitano - Centro": {
+        "color": "#DC2626",
+        "paradas": [
+            {"nombre": "Hospital Metropolitano", "lat": 25.73076, "lon": -100.19908},
+            {"nombre": "Apodaca Centro", "lat": 25.78027, "lon": -100.18790},
+            {"nombre": "Sendero", "lat": 25.720, "lon": -100.290},
+            {"nombre": "Padre Mier", "lat": 25.680, "lon": -100.315},
+        ],
+        "municipios": "Apodaca, Monterrey",
+        "horario": "05:00 - 23:00",
+        "frecuencia": "12 min",
+        "longitud": "≈ 25 km",
+        "duracion": "≈ 55 min",
+        "tipo": "Transmetro",
+    },
+}
+
+# ============================================================
+# HELPERS DE CATÁLOGO Y TIPO
+# ============================================================
+def catalogo_por_tipo(tipo):
+    if tipo == "Camión":
+        return dict(RUTAS)
+    if tipo == "Metro":
+        return dict(METRO)
+    if tipo == "Transmetro":
+        return dict(TRANSMETRO)
+    return {**RUTAS, **TRANSMETRO, **METRO}
+
+def get_ruta_info(nombre):
+    if nombre in METRO:
+        m = METRO[nombre]
+        return {
+            "color": m["color"],
+            "paradas": m.get("estaciones", []),
+            "municipios": "Monterrey y área metropolitana",
+            "horario": "05:00 - 23:30",
+            "frecuencia": "5-10 min",
+            "longitud": "—",
+            "duracion": "—",
+            "tipo": "Metro",
+            "es_metro": True,
+        }
+    if nombre in TRANSMETRO:
+        return {**TRANSMETRO[nombre], "es_metro": False}
+    if nombre in RUTAS:
+        return {**RUTAS[nombre], "es_metro": False}
+    return None
+
+def primer_nombre(tipo):
+    cat = catalogo_por_tipo(tipo)
+    return list(cat.keys())[0] if cat else None
 
 # ============================================================
 # OSRM
@@ -419,7 +564,7 @@ def obtener_ruta_por_calles(paradas_tuple):
 # ============================================================
 # MAPAS
 # ============================================================
-def crear_mapa_base(zoom=12, centro=(25.720, -100.240)):
+def crear_mapa_base(zoom=12, centro=(25.740, -100.220)):
     return folium.Map(location=list(centro), zoom_start=zoom, tiles="OpenStreetMap")
 
 def agregar_ruta_al_mapa(mapa, nombre_ruta, datos):
@@ -450,28 +595,35 @@ def agregar_metro_al_mapa(mapa, nombre_linea, datos):
     for est in datos["estaciones"]:
         folium.Marker(
             location=[est["lat"], est["lon"]],
-            icon=folium.Icon(color="darkblue", icon="subway", prefix="fa"),
+            icon=folium.Icon(color="blue", icon="subway", prefix="fa"),
             popup=folium.Popup(f"<b>{est['nombre']}</b><br>{nombre_linea}", max_width=250),
             tooltip=est["nombre"],
         ).add_to(mapa)
+
+def dibujar_ruta_generica(mapa, nombre):
+    if nombre in METRO:
+        agregar_metro_al_mapa(mapa, nombre, METRO[nombre])
+    elif nombre in TRANSMETRO:
+        agregar_ruta_al_mapa(mapa, nombre, TRANSMETRO[nombre])
+    elif nombre in RUTAS:
+        agregar_ruta_al_mapa(mapa, nombre, RUTAS[nombre])
 
 # ============================================================
 # HERRAMIENTAS DEL CHATBOT
 # ============================================================
 def buscar_ruta_por_nombre(nombre_ruta: str) -> str:
-    resultados = [
-        f"**{nombre}**\n- Municipios: {d['municipios']}\n- Horario: {d['horario']}\n"
-        f"- Frecuencia: {d['frecuencia']}\n- Paradas: {', '.join(p['nombre'] for p in d['paradas'])}"
-        for nombre, d in RUTAS.items() if nombre_ruta.lower() in nombre.lower()
-    ]
+    resultados = []
+    for nombre, d in {**RUTAS, **TRANSMETRO}.items():
+        if nombre_ruta.lower() in nombre.lower():
+            resultados.append(f"**{nombre}**\n- Municipios: {d['municipios']}\n- Horario: {d['horario']}\n- Frecuencia: {d['frecuencia']}\n- Paradas: {', '.join(p['nombre'] for p in d['paradas'])}")
     return "\n\n".join(resultados) if resultados else "No encontré rutas con ese nombre."
 
 def buscar_ruta_por_parada(parada: str) -> str:
-    resultados = [
-        f"**{nombre}** pasa por: {', '.join(p['nombre'] for p in d['paradas'] if parada.lower() in p['nombre'].lower())}"
-        for nombre, d in RUTAS.items()
-        if any(parada.lower() in p["nombre"].lower() for p in d["paradas"])
-    ]
+    resultados = []
+    for nombre, d in {**RUTAS, **TRANSMETRO}.items():
+        coinciden = [p["nombre"] for p in d["paradas"] if parada.lower() in p["nombre"].lower()]
+        if coinciden:
+            resultados.append(f"**{nombre}** pasa por: {', '.join(coinciden)}")
     return "\n".join(resultados) if resultados else "No encontré rutas que pasen por esa parada."
 
 def obtener_info_metro(linea: str) -> str:
@@ -483,17 +635,17 @@ def obtener_info_metro(linea: str) -> str:
     return "\n\n".join(resultados) if resultados else "No encontré esa línea del metro."
 
 def listar_todas_rutas() -> str:
-    return "\n".join(f"- {n}" for n in RUTAS.keys())
+    return "\n".join(f"- [Camión] {n}" for n in RUTAS) + "\n" + "\n".join(f"- [Transmetro] {n}" for n in TRANSMETRO)
 
 def listar_lineas_metro() -> str:
     return "\n".join(f"- {n}" for n in METRO.keys())
 
 tools = [
-    {"type": "function", "function": {"name": "buscar_ruta_por_nombre", "description": "Busca rutas por nombre o número.", "parameters": {"type": "object", "properties": {"nombre_ruta": {"type": "string"}}, "required": ["nombre_ruta"]}}},
-    {"type": "function", "function": {"name": "buscar_ruta_por_parada", "description": "Busca rutas que pasen por una parada o calle.", "parameters": {"type": "object", "properties": {"parada": {"type": "string"}}, "required": ["parada"]}}},
+    {"type": "function", "function": {"name": "buscar_ruta_por_nombre", "description": "Busca rutas de camión o Transmetro por nombre o número.", "parameters": {"type": "object", "properties": {"nombre_ruta": {"type": "string"}}, "required": ["nombre_ruta"]}}},
+    {"type": "function", "function": {"name": "buscar_ruta_por_parada", "description": "Busca rutas de camión o Transmetro que pasen por una parada.", "parameters": {"type": "object", "properties": {"parada": {"type": "string"}}, "required": ["parada"]}}},
     {"type": "function", "function": {"name": "obtener_info_metro", "description": "Devuelve estaciones y conexiones de una línea del Metro.", "parameters": {"type": "object", "properties": {"linea": {"type": "string"}}, "required": ["linea"]}}},
-    {"type": "function", "function": {"name": "listar_todas_rutas", "description": "Lista todas las rutas de camión disponibles.", "parameters": {"type": "object", "properties": {}}}},
-    {"type": "function", "function": {"name": "listar_lineas_metro", "description": "Lista todas las líneas del Metro disponibles.", "parameters": {"type": "object", "properties": {}}}},
+    {"type": "function", "function": {"name": "listar_todas_rutas", "description": "Lista todas las rutas de camión y Transmetro.", "parameters": {"type": "object", "properties": {}}}},
+    {"type": "function", "function": {"name": "listar_lineas_metro", "description": "Lista todas las líneas del Metro.", "parameters": {"type": "object", "properties": {}}}},
 ]
 
 def ejecutar_herramienta(nombre, args):
@@ -511,15 +663,15 @@ def get_metro_connections(route_data):
     found = []
     for nombre_linea, datos in METRO.items():
         for est in datos["estaciones"]:
-            for parada in route_data["paradas"]:
+            for parada in route_data.get("paradas", []):
                 if est["nombre"].split(" (")[0].lower() in parada["nombre"].lower():
                     found.append((nombre_linea, est["nombre"]))
     return list({f"{l} · {e}" for l, e in found})
 
 def get_nearby_routes(route_name, route_data):
-    propias = {p["nombre"] for p in route_data["paradas"]}
+    propias = {p["nombre"] for p in route_data.get("paradas", [])}
     nearby = []
-    for nombre, d in RUTAS.items():
+    for nombre, d in {**RUTAS, **TRANSMETRO}.items():
         if nombre == route_name:
             continue
         if propias & {p["nombre"] for p in d["paradas"]}:
@@ -530,8 +682,9 @@ def planificar(origen, destino):
     o, d = origen.lower().strip(), destino.lower().strip()
     if not o or not d:
         return [], [], []
+    todas = {**RUTAS, **TRANSMETRO}
     rutas_o, rutas_d = {}, {}
-    for nombre, data in RUTAS.items():
+    for nombre, data in todas.items():
         po = next((p["nombre"] for p in data["paradas"] if o in p["nombre"].lower()), None)
         pd = next((p["nombre"] for p in data["paradas"] if d in p["nombre"].lower()), None)
         if po: rutas_o[nombre] = po
@@ -542,11 +695,35 @@ def planificar(origen, destino):
         for rb in rutas_d:
             if ra == rb:
                 continue
-            shared = ({p["nombre"] for p in RUTAS[ra]["paradas"]}
-                      & {p["nombre"] for p in RUTAS[rb]["paradas"]})
+            shared = ({p["nombre"] for p in todas[ra]["paradas"]}
+                      & {p["nombre"] for p in todas[rb]["paradas"]})
             if shared:
                 transbordos.append((ra, rb, list(shared)[0]))
     return directas, transbordos, list(rutas_o) + list(rutas_d)
+
+# ============================================================
+# ALERTAS COMUNITARIAS
+# ============================================================
+if "alertas_locales" not in st.session_state:
+    st.session_state.alertas_locales = [
+        {
+            "autor": "Sistema Vialink",
+            "tipo": "Otro",
+            "ruta": "General",
+            "mensaje": "Bienvenido al foro comunitario. Aquí puedes reportar retrasos, cambios de recorrido o cualquier aviso útil para otros usuarios.",
+            "severidad": "Baja",
+            "created_at": time.strftime("%Y-%m-%d %H:%M"),
+        }
+    ]
+
+def publicar_alerta(autor, tipo, ruta, mensaje, severidad):
+    alerta = {
+        "autor": autor, "tipo": tipo, "ruta": ruta,
+        "mensaje": mensaje, "severidad": severidad,
+        "created_at": time.strftime("%Y-%m-%d %H:%M"),
+    }
+    st.session_state.alertas_locales.insert(0, alerta)
+    return True
 
 # ============================================================
 # SESSION STATE
@@ -554,18 +731,15 @@ def planificar(origen, destino):
 if "current_view" not in st.session_state:
     st.session_state.current_view = "Inicio"
 if "selected_route" not in st.session_state:
-    st.session_state.selected_route = list(RUTAS.keys())[0]
-if "selected_metro" not in st.session_state:
-    st.session_state.selected_metro = list(METRO.keys())[0]
+    st.session_state.selected_route = primer_nombre(st.session_state.tipo_transporte)
 if "chat_messages" not in st.session_state:
     st.session_state.chat_messages = [{
         "role": "system",
         "content": (
             "Eres Vialink IA, un asistente experto en transporte público de la Zona Metropolitana de Monterrey. "
-            "Usa SIEMPRE las herramientas disponibles para consultar rutas y metro antes de responder; "
-            "no inventes rutas ni horarios. Responde en español, claro y amable. "
-            "Si el usuario pide 'cómo llegar', identifica qué rutas pasan por esos puntos usando "
-            "buscar_ruta_por_parada y sugiere la mejor combinación. Si no hay información, dilo con honestidad."
+            "Puedes consultar rutas de camión, líneas de Transmetro y líneas de Metro. "
+            "Usa SIEMPRE las herramientas disponibles antes de responder; no inventes rutas ni horarios. "
+            "Responde en español, claro y amable. Si no hay información, dilo con honestidad."
         ),
     }]
 
@@ -578,6 +752,7 @@ MENU = [
     ("📍", "Planificador de rutas"),
     ("🚌", "Información de líneas"),
     ("🔔", "Notificaciones"),
+    ("🚨", "Alertas Comunitarias"),
     ("🤖", "Asistente IA"),
     ("⚙️", "Configuración"),
 ]
@@ -586,7 +761,7 @@ with st.sidebar:
     if LOGO_B64:
         logo_html = f'<div class="logo"><img src="data:image/png;base64,{LOGO_B64}" style="width:100%;height:100%;object-fit:contain;border-radius:16px;"></div>'
     else:
-        logo_html = '<div class="logo">🚌</div>'
+        logo_html = f'<div class="logo" style="background: linear-gradient(135deg, {_color["primary"]}, {_color["primary"]}DD); font-size: 44px;">🚌</div>'
 
     st.markdown(
         f"""
@@ -598,6 +773,22 @@ with st.sidebar:
         """,
         unsafe_allow_html=True,
     )
+
+    st.markdown('<div class="tipo-selector-label">Tipo de transporte</div>', unsafe_allow_html=True)
+    tipos = ["Todos", "Camión", "Metro", "Transmetro"]
+    nuevo_tipo = st.radio(
+        "Tipo de transporte",
+        tipos,
+        index=tipos.index(st.session_state.tipo_transporte),
+        key="tipo_selector",
+        label_visibility="collapsed",
+    )
+    if nuevo_tipo != st.session_state.tipo_transporte:
+        st.session_state.tipo_transporte = nuevo_tipo
+        st.session_state.selected_route = primer_nombre(nuevo_tipo)
+        st.rerun()
+
+    st.markdown("---")
 
     for icon, name in MENU:
         is_active = st.session_state.current_view == name
@@ -614,7 +805,7 @@ with st.sidebar:
 # ============================================================
 # TOP BAR
 # ============================================================
-tb = st.columns([5, 1.6, 0.7])
+tb = st.columns([5, 1.6, 1.3, 0.7])
 with tb[0]:
     top_search = st.text_input(
         "Buscar",
@@ -623,15 +814,19 @@ with tb[0]:
         key="top_search",
     )
 with tb[1]:
+    st.markdown('<div class="topbar-loc">📍 Apodaca, Nuevo León</div>', unsafe_allow_html=True)
+with tb[2]:
+    tipo_actual = st.session_state.tipo_transporte
+    iconos_tipo = {"Todos": "🌐", "Camión": "🚌", "Metro": "🚇", "Transmetro": "🚍"}
     st.markdown(
-        '<div class="topbar-loc">📍 Apodaca, Nuevo León</div>',
+        f'<div class="tipo-badge">{iconos_tipo[tipo_actual]} {tipo_actual}</div>',
         unsafe_allow_html=True,
     )
-with tb[2]:
+with tb[3]:
     st.markdown('<div class="topbar-prof">V</div>', unsafe_allow_html=True)
 
 if top_search:
-    coincidencias = [r for r in RUTAS if top_search.lower() in r.lower()]
+    coincidencias = [r for r in catalogo_por_tipo(st.session_state.tipo_transporte) if top_search.lower() in r.lower()]
     if coincidencias:
         st.markdown("**Sugerencias:**")
         cols_chip = st.columns(min(len(coincidencias), 4))
@@ -647,7 +842,7 @@ if top_search:
 # ============================================================
 def render_inicio():
     st.markdown(
-        """
+        f"""
         <div class="hero-banner">
             <h1>Transporte Público de Apodaca</h1>
             <p>Rutas más inteligentes, una ciudad más conectada</p>
@@ -655,6 +850,10 @@ def render_inicio():
         """,
         unsafe_allow_html=True,
     )
+
+    cat = catalogo_por_tipo(st.session_state.tipo_transporte)
+    if st.session_state.selected_route not in cat:
+        st.session_state.selected_route = primer_nombre(st.session_state.tipo_transporte)
 
     col_left, col_center, col_right = st.columns([1.05, 2.4, 1.15], gap="medium")
 
@@ -668,22 +867,24 @@ def render_inicio():
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown('<div class="vl-card"><h4>🚌 Selecciona una ruta</h4>', unsafe_allow_html=True)
+        etiqueta = "Línea" if st.session_state.tipo_transporte == "Metro" else "Ruta"
+        st.markdown(f'<div class="vl-card"><h4>🚏 Selecciona una {etiqueta.lower()}</h4>', unsafe_allow_html=True)
         selected = st.selectbox(
-            "Ruta:",
-            list(RUTAS.keys()),
-            index=list(RUTAS.keys()).index(st.session_state.selected_route),
+            f"{etiqueta}:",
+            list(cat.keys()),
+            index=list(cat.keys()).index(st.session_state.selected_route),
             label_visibility="collapsed",
         )
         st.session_state.selected_route = selected
         st.markdown("</div>", unsafe_allow_html=True)
 
-        d = RUTAS[st.session_state.selected_route]
+        d = get_ruta_info(st.session_state.selected_route)
         st.markdown(
             f"""
             <div class="vl-card">
-                <h4>📊 Información de la ruta</h4>
-                <div class="label">Horario</div><div class="value" style="font-size:15px;">{d['horario']}</div>
+                <h4>📊 Información</h4>
+                <div class="label">Tipo</div><div class="value" style="font-size:15px;">{d['tipo']}</div>
+                <div class="label" style="margin-top:10px;">Horario</div><div class="value" style="font-size:15px;">{d['horario']}</div>
                 <div class="label" style="margin-top:10px;">Frecuencia</div><div class="value">{d['frecuencia']}</div>
                 <div class="label" style="margin-top:10px;">Distancia</div><div class="value">{d['longitud']}</div>
                 <div class="label" style="margin-top:10px;">Duración estimada</div><div class="value">{d['duracion']}</div>
@@ -694,13 +895,10 @@ def render_inicio():
 
         metro_conn = get_metro_connections(d)
         metro_html = "".join(f'<span class="vl-pill blue">{c}</span>' for c in metro_conn) or '<span class="vl-pill">Sin conexión directa</span>'
-        st.markdown(
-            f'<div class="vl-card"><h4>🚇 Conexiones con Metrorrey</h4>{metro_html}</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(f'<div class="vl-card"><h4>🚇 Conexiones con Metrorrey</h4>{metro_html}</div>', unsafe_allow_html=True)
 
     with col_center:
-        d = RUTAS[st.session_state.selected_route]
+        d = get_ruta_info(st.session_state.selected_route)
         st.markdown(
             f"""
             <div class="vl-card" style="padding:16px 22px;">
@@ -719,13 +917,13 @@ def render_inicio():
             unsafe_allow_html=True,
         )
 
-        mapa = crear_mapa_base(zoom=12)
+        mapa = crear_mapa_base(zoom=11)
         with st.spinner("Calculando recorrido por calles..."):
-            agregar_ruta_al_mapa(mapa, st.session_state.selected_route, d)
+            dibujar_ruta_generica(mapa, st.session_state.selected_route)
         st_folium(mapa, width=None, height=520, returned_objects=[])
 
     with col_right:
-        d = RUTAS[st.session_state.selected_route]
+        d = get_ruta_info(st.session_state.selected_route)
 
         st.markdown(
             f"""
@@ -738,31 +936,26 @@ def render_inicio():
             unsafe_allow_html=True,
         )
 
-        st.markdown(
-            f"""
-            <div class="vl-card">
-                <h4>📍 Siguiente parada</h4>
-                <p style="font-size:13px;">Disponible cuando compartas tu ubicación.</p>
-                <p><b>Origen:</b> {d['paradas'][0]['nombre']}</p>
-                <p><b>Destino:</b> {d['paradas'][-1]['nombre']}</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        paradas_lista = d.get("paradas", [])
+        if paradas_lista:
+            st.markdown(
+                f"""
+                <div class="vl-card">
+                    <h4>📍 Recorrido</h4>
+                    <p><b>Origen:</b> {paradas_lista[0]['nombre']}</p>
+                    <p><b>Destino:</b> {paradas_lista[-1]['nombre']}</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
         cercanas = get_nearby_routes(st.session_state.selected_route, d)
         html_cerc = "".join(f'<span class="vl-pill">{r.split(" · ")[0]}</span>' for r in cercanas) or '<span class="vl-pill">Sin rutas cercanas</span>'
-        st.markdown(
-            f'<div class="vl-card"><h4>🚏 Otras líneas cercanas</h4>{html_cerc}</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(f'<div class="vl-card"><h4>🚏 Otras líneas cercanas</h4>{html_cerc}</div>', unsafe_allow_html=True)
 
         metro_conn = get_metro_connections(d)
         metro_html = "".join(f'<span class="vl-pill blue">{c}</span>' for c in metro_conn) or '<span class="vl-pill">Sin conexión directa</span>'
-        st.markdown(
-            f'<div class="vl-card"><h4>🚇 Conexión Metrorrey</h4>{metro_html}</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(f'<div class="vl-card"><h4>🚇 Conexión Metrorrey</h4>{metro_html}</div>', unsafe_allow_html=True)
 
         st.markdown(
             """
@@ -781,25 +974,29 @@ def render_inicio():
 def render_mapa():
     st.markdown('<div class="section-title">🗺️ Mapa en tiempo real</div>', unsafe_allow_html=True)
 
+    cat = catalogo_por_tipo(st.session_state.tipo_transporte)
+    if st.session_state.selected_route not in cat:
+        st.session_state.selected_route = primer_nombre(st.session_state.tipo_transporte)
+
     top = st.columns([2, 2])
     with top[0]:
         ruta_sel = st.selectbox(
             "Ruta a visualizar",
-            list(RUTAS.keys()),
-            index=list(RUTAS.keys()).index(st.session_state.selected_route),
+            list(cat.keys()),
+            index=list(cat.keys()).index(st.session_state.selected_route),
         )
         st.session_state.selected_route = ruta_sel
     with top[1]:
         mostrar_metro = st.checkbox("Mostrar también las líneas del Metro", value=True)
 
-    mapa = crear_mapa_base(zoom=12)
+    mapa = crear_mapa_base(zoom=11)
     with st.spinner("Calculando recorrido por calles..."):
-        agregar_ruta_al_mapa(mapa, st.session_state.selected_route, RUTAS[st.session_state.selected_route])
-        if mostrar_metro:
+        dibujar_ruta_generica(mapa, st.session_state.selected_route)
+        if mostrar_metro and st.session_state.selected_route not in METRO:
             for nombre, datos in METRO.items():
                 agregar_metro_al_mapa(mapa, nombre, datos)
 
-    d = RUTAS[st.session_state.selected_route]
+    d = get_ruta_info(st.session_state.selected_route)
     st.markdown(
         f"""
         <div class="vl-card" style="padding:14px 22px;">
@@ -841,7 +1038,7 @@ def render_planificador():
         if directas:
             st.markdown('<div class="section-title" style="font-size:18px;margin-top:20px;">✅ Rutas directas</div>', unsafe_allow_html=True)
             for r in directas:
-                datos = RUTAS[r]
+                datos = get_ruta_info(r)
                 st.markdown(
                     f"""
                     <div class="vl-card">
@@ -880,46 +1077,82 @@ def render_planificador():
 def render_lineas():
     st.markdown('<div class="section-title">🚌 Información de líneas</div>', unsafe_allow_html=True)
 
-    tab1, tab2 = st.tabs(["Rutas de camión", "Líneas de Metrorrey"])
+    tipo = st.session_state.tipo_transporte
+    if tipo == "Metro":
+        _render_tab_metro()
+    elif tipo == "Camión":
+        _render_tab_camiones()
+    elif tipo == "Transmetro":
+        _render_tab_transmetro()
+    else:
+        tab1, tab2, tab3 = st.tabs(["Camiones", "Metrorrey", "Transmetro"])
+        with tab1: _render_tab_camiones()
+        with tab2: _render_tab_metro()
+        with tab3: _render_tab_transmetro()
 
-    with tab1:
-        for nombre, datos in RUTAS.items():
-            col1, col2 = st.columns([4, 1])
-            with col1:
-                st.markdown(
-                    f"""
-                    <div class="vl-card" style="margin-bottom:10px;">
-                        <h3>{nombre}</h3>
-                        <span class="vl-pill">{datos['tipo']}</span>
-                        <span class="vl-pill green">{datos['municipios']}</span>
-                        <span class="vl-pill orange">{datos['horario']}</span>
-                        <p style="font-size:13px;margin-top:8px;color:#4A5A78;">
-                            Frecuencia {datos['frecuencia']} · {datos['longitud']} · {datos['duracion']}
-                        </p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-            with col2:
-                st.markdown("<div style='height:26px'></div>", unsafe_allow_html=True)
-                if st.button("Ver mapa", key=f"inf_{nombre}", use_container_width=True):
-                    st.session_state.selected_route = nombre
-                    st.session_state.current_view = "Mapa en tiempo real"
-                    st.rerun()
-
-    with tab2:
-        for nombre, datos in METRO.items():
-            estaciones = ", ".join(e["nombre"] for e in datos["estaciones"])
+def _render_tab_camiones():
+    for nombre, datos in RUTAS.items():
+        col1, col2 = st.columns([4, 1])
+        with col1:
             st.markdown(
                 f"""
-                <div class="vl-card">
+                <div class="vl-card" style="margin-bottom:10px;">
                     <h3>{nombre}</h3>
-                    <p style="font-size:13px;color:#4A5A78;">{estaciones}</p>
-                    <p style="font-size:13px;margin-top:8px;"><b>Conexión Apodaca:</b> {datos['conexion_apodaca']}</p>
+                    <span class="vl-pill">{datos['tipo']}</span>
+                    <span class="vl-pill green">{datos['municipios']}</span>
+                    <span class="vl-pill orange">{datos['horario']}</span>
+                    <p style="font-size:13px;margin-top:8px;color:#4A5A78;">
+                        Frecuencia {datos['frecuencia']} · {datos['longitud']} · {datos['duracion']}
+                    </p>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
+        with col2:
+            st.markdown("<div style='height:26px'></div>", unsafe_allow_html=True)
+            if st.button("Ver mapa", key=f"inf_cam_{nombre}", use_container_width=True):
+                st.session_state.selected_route = nombre
+                st.session_state.current_view = "Mapa en tiempo real"
+                st.rerun()
+
+def _render_tab_metro():
+    for nombre, datos in METRO.items():
+        estaciones = ", ".join(e["nombre"] for e in datos["estaciones"])
+        st.markdown(
+            f"""
+            <div class="vl-card">
+                <h3>{nombre}</h3>
+                <p style="font-size:13px;color:#4A5A78;">{estaciones}</p>
+                <p style="font-size:13px;margin-top:8px;"><b>Conexión Apodaca:</b> {datos['conexion_apodaca']}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+def _render_tab_transmetro():
+    for nombre, datos in TRANSMETRO.items():
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.markdown(
+                f"""
+                <div class="vl-card" style="margin-bottom:10px;">
+                    <h3>{nombre}</h3>
+                    <span class="vl-pill">{datos['tipo']}</span>
+                    <span class="vl-pill green">{datos['municipios']}</span>
+                    <span class="vl-pill orange">{datos['horario']}</span>
+                    <p style="font-size:13px;margin-top:8px;color:#4A5A78;">
+                        Frecuencia {datos['frecuencia']} · {datos['longitud']} · {datos['duracion']}
+                    </p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with col2:
+            st.markdown("<div style='height:26px'></div>", unsafe_allow_html=True)
+            if st.button("Ver mapa", key=f"inf_tm_{nombre}", use_container_width=True):
+                st.session_state.selected_route = nombre
+                st.session_state.current_view = "Mapa en tiempo real"
+                st.rerun()
 
 # ============================================================
 # VISTA: NOTIFICACIONES
@@ -927,7 +1160,6 @@ def render_lineas():
 def render_notificaciones():
     st.markdown('<div class="section-title">🔔 Notificaciones</div>', unsafe_allow_html=True)
     st.caption("Aquí aparecerán los avisos e incidencias del servicio cuando estén disponibles.")
-
     st.markdown(
         """
         <div class="notif-item info">
@@ -935,7 +1167,6 @@ def render_notificaciones():
             <p>Esta sección mostrará cambios de recorrido, retrasos y avisos operativos en tiempo real. Por ahora el sistema no recibe reportes oficiales.</p>
             <div class="meta">Sistema · Ahora</div>
         </div>
-
         <div class="notif-item warning">
             <h5>Sin alertas activas</h5>
             <p>No hay avisos publicados por los operadores del transporte público. Cuando existan, aparecerán aquí.</p>
@@ -944,25 +1175,92 @@ def render_notificaciones():
         """,
         unsafe_allow_html=True,
     )
-
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("Suscribirme a notificaciones de mis rutas", type="primary"):
         st.success("Te has suscrito. (Función de prototipo.)")
+
+# ============================================================
+# VISTA: ALERTAS COMUNITARIAS
+# ============================================================
+def render_alertas():
+    st.markdown('<div class="section-title">🚨 Alertas Comunitarias</div>', unsafe_allow_html=True)
+    st.caption("Comparte cambios en el servicio, retrasos o cualquier aviso útil para otros usuarios.")
+
+    rutas_alerta = ["General"] + list({**RUTAS, **TRANSMETRO, **METRO}.keys())
+
+    with st.form("form_alerta", clear_on_submit=True):
+        st.markdown("#### 📢 Publicar una nueva alerta")
+        col1, col2, col3 = st.columns([2, 2, 1])
+        with col1:
+            autor = st.text_input("Tu nombre o alias", placeholder="Ej. Juan M.")
+        with col2:
+            ruta = st.selectbox("Ruta (opcional)", rutas_alerta)
+        with col3:
+            tipo = st.selectbox("Tipo", ["Retraso", "Cambio de recorrido", "Falla de unidad", "Otro"])
+        mensaje = st.text_area("¿Qué está pasando?", placeholder="Ej. La ruta 219 no está pasando por Miguel Alemán.", height=100)
+        severidad = st.select_slider("Severidad", options=["Baja", "Media", "Alta"], value="Media")
+        enviado = st.form_submit_button("📢 Publicar alerta", type="primary", use_container_width=True)
+        if enviado:
+            if not autor.strip() or not mensaje.strip():
+                st.error("Por favor escribe tu nombre y el mensaje.")
+            else:
+                publicar_alerta(autor.strip(), tipo, ruta, mensaje.strip(), severidad)
+                st.success("¡Alerta publicada!")
+                st.rerun()
+
+    st.markdown("---")
+    alertas = st.session_state.alertas_locales
+    if not alertas:
+        st.info("Aún no hay alertas publicadas.")
+        return
+
+    col_f1, col_f2 = st.columns([1, 3])
+    with col_f1:
+        filtro = st.selectbox("Filtrar por tipo", ["Todas", "Retraso", "Cambio de recorrido", "Falla de unidad", "Otro"])
+    with col_f2:
+        st.markdown(f"<br>**{len(alertas)} alertas publicadas**", unsafe_allow_html=True)
+
+    if filtro != "Todas":
+        alertas = [a for a in alertas if a.get("tipo") == filtro]
+
+    for alerta in alertas:
+        sev = alerta.get("severidad", "Media")
+        colores = {"Alta": "#DC2626", "Media": "#F59E0B", "Baja": "#15803D"}
+        color = colores.get(sev, "#0866E9")
+        iconos = {"Retraso": "⏱️", "Cambio de recorrido": "🔄", "Falla de unidad": "🔧", "Otro": "ℹ️"}
+        icono = iconos.get(alerta.get("tipo", "Otro"), "📌")
+        fecha = str(alerta.get("created_at", ""))[:16].replace("T", " ")
+        st.markdown(
+            f"""
+            <div class="vl-card" style="border-left: 4px solid {color};">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+                    <div style="flex:1;">
+                        <h4 style="margin:0 0 6px 0; color:#071B49; font-size:15px;">
+                            {icono} {alerta.get('tipo', 'Otro')} · {alerta.get('ruta') or 'General'}
+                        </h4>
+                        <p style="font-size:14px; color:#4A5A78; margin:6px 0;">{alerta.get('mensaje', '')}</p>
+                        <p style="font-size:12px; color:#8A97B0; margin-top:8px;">
+                            Por <b>{alerta.get('autor', 'Anónimo')}</b> · {fecha}
+                        </p>
+                    </div>
+                    <span class="vl-pill" style="background:{color}20; color:{color}; white-space:nowrap;">{sev}</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 # ============================================================
 # VISTA: ASISTENTE IA
 # ============================================================
 def render_asistente():
     st.markdown('<div class="section-title">🤖 Asistente IA</div>', unsafe_allow_html=True)
-    st.caption("Pregunta lo que quieras sobre rutas, paradas y Metrorrey. El asistente consulta los datos reales de la app.")
+    st.caption("Pregunta sobre rutas de camión, Transmetro y Metrorrey. El asistente consulta los datos reales de la app.")
 
     try:
-        client = OpenAI(
-            api_key=st.secrets["GROQ_API_KEY"],
-            base_url="https://api.groq.com/openai/v1",
-        )
+        client = OpenAI(api_key=st.secrets["GROQ_API_KEY"], base_url="https://api.groq.com/openai/v1")
     except Exception:
-        st.error("⚠️ Falta la API Key de Groq. Agrégala en `.streamlit/secrets.toml` como `GROQ_API_KEY = 'gsk_...'`.")
+        st.error("⚠️ Falta la API Key de Groq en `.streamlit/secrets.toml` como `GROQ_API_KEY = 'gsk_...'`.")
         return
 
     MODELO = "openai/gpt-oss-120b"
@@ -991,8 +1289,7 @@ def render_asistente():
 
                 while msg.tool_calls:
                     st.session_state.chat_messages.append({
-                        "role": "assistant",
-                        "content": msg.content or "",
+                        "role": "assistant", "content": msg.content or "",
                         "tool_calls": [
                             {"id": tc.id, "type": "function",
                              "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
@@ -1003,13 +1300,10 @@ def render_asistente():
                         args = json.loads(tc.function.arguments)
                         resultado = ejecutar_herramienta(tc.function.name, args)
                         st.session_state.chat_messages.append({
-                            "role": "tool",
-                            "tool_call_id": tc.id,
-                            "content": resultado,
+                            "role": "tool", "tool_call_id": tc.id, "content": resultado,
                         })
                     response = client.chat.completions.create(
-                        model=MODELO,
-                        messages=st.session_state.chat_messages,
+                        model=MODELO, messages=st.session_state.chat_messages,
                     )
                     msg = response.choices[0].message
 
@@ -1019,28 +1313,26 @@ def render_asistente():
 
             except Exception as e:
                 st.error(f"Error al consultar Groq: {e}")
-                st.caption("Si el error menciona 'rate limit', espera unos segundos y vuelve a intentar.")
+                st.caption("Si el error menciona 'rate limit', espera unos segundos.")
 
 # ============================================================
 # VISTA: CONFIGURACIÓN
 # ============================================================
 def render_configuracion():
     st.markdown('<div class="section-title">⚙️ Configuración</div>', unsafe_allow_html=True)
-
     st.markdown(
         """
         <div class="vl-card">
             <h4>ℹ️ Acerca de Vialink</h4>
             <p>Prototipo de plataforma de movilidad para la Zona Metropolitana de Monterrey.</p>
             <p style="margin-top:8px;font-size:13px;color:#4A5A78;">
-                Versión 1.0 · Datos de rutas y horarios de ejemplo · Recorridos calculados por OSRM ·
+                Versión 1.1 · Rutas, Metrorrey y Transmetro · Recorridos calculados por OSRM ·
                 Asistente IA impulsado por Groq.
             </p>
         </div>
         """,
         unsafe_allow_html=True,
     )
-
     st.markdown(
         """
         <div class="vl-card">
@@ -1050,19 +1342,14 @@ def render_configuracion():
         """,
         unsafe_allow_html=True,
     )
-
     mostrar_alertas = st.toggle("Recibir notificaciones de cambios en el servicio", value=False)
     if mostrar_alertas:
         st.success("Notificaciones activadas (función de prototipo).")
-
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("Borrar conversación del asistente"):
         st.session_state.chat_messages = [{
             "role": "system",
-            "content": (
-                "Eres Vialink IA, un asistente experto en transporte público de la Zona Metropolitana de Monterrey. "
-                "Usa SIEMPRE las herramientas disponibles."
-            ),
+            "content": "Eres Vialink IA, experto en transporte público de la Zona Metropolitana de Monterrey. Usa SIEMPRE las herramientas disponibles.",
         }]
         st.success("Conversación eliminada.")
 
@@ -1080,6 +1367,8 @@ elif view == "Información de líneas":
     render_lineas()
 elif view == "Notificaciones":
     render_notificaciones()
+elif view == "Alertas Comunitarias":
+    render_alertas()
 elif view == "Asistente IA":
     render_asistente()
 elif view == "Configuración":
