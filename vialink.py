@@ -1,5 +1,5 @@
 # ============================================================
-# VIALINK · Versión móvil con sidebar toggle visible
+# VIALINK · Versión con flecha clara y layout vertical estable
 # ============================================================
 
 import streamlit as st
@@ -13,9 +13,6 @@ from openai import OpenAI
 import base64
 from pathlib import Path
 
-# ============================================================
-# CARGA DEL LOGO LOCAL
-# ============================================================
 def cargar_logo_base64(ruta="assets/logo.png"):
     try:
         with open(ruta, "rb") as f:
@@ -25,9 +22,6 @@ def cargar_logo_base64(ruta="assets/logo.png"):
 
 LOGO_B64 = cargar_logo_base64()
 
-# ============================================================
-# CONFIGURACIÓN
-# ============================================================
 st.set_page_config(
     page_title="Vialink · Rutas de Apodaca",
     page_icon="assets/logo.png",
@@ -35,9 +29,6 @@ st.set_page_config(
     initial_sidebar_state="auto",
 )
 
-# ============================================================
-# SESSION STATE
-# ============================================================
 if "tipo_transporte" not in st.session_state:
     st.session_state.tipo_transporte = "Todos"
 
@@ -50,9 +41,6 @@ TIPO_COLORES = {
 
 _color = TIPO_COLORES[st.session_state.tipo_transporte]
 
-# ============================================================
-# CSS GLOBAL
-# ============================================================
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -63,107 +51,135 @@ html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
 [data-testid="stHeader"] {{ background: transparent; height: 0; }}
 
 /* ============================================================
-   ============ BOTÓN DE SIDEBAR (ABRIR/CERRAR) ============
+   ====== ESTABILIDAD DE LAYOUT (evita que se muevan cosas) ======
+   ============================================================ */
+html, body, [data-testid="stAppViewContainer"] {{
+    overflow-anchor: none !important;
+    overscroll-behavior-y: none;
+}}
+[data-testid="stAppViewContainer"] > .main {{
+    min-height: 100vh !important;
+    contain: layout style !important;
+}}
+.vl-card {{
+    contain: layout !important;
+    min-height: 70px;
+}}
+[data-testid="stIFrame"] {{
+    min-height: 380px !important;
+    contain: strict !important;
+}}
+[data-testid="stSidebar"] {{
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+}}
+.block-container {{
+    padding-top: 1.5rem !important;
+}}
+
+/* ============================================================
+   ====== BOTÓN GRANDE Y CLARO PARA ABRIR LA SIDEBAR ======
    ============================================================ */
 
-/* Botón para CERRAR la sidebar (cuando está abierta) */
-[data-testid="stSidebarCollapseButton"] {{
-    position: relative !important;
-}}
-[data-testid="stSidebarCollapseButton"] button,
-[data-testid="stSidebarCollapseButton"] > div > button {{
-    background: #FFFFFF !important;
-    color: {_color['primary']} !important;
-    border: 2px solid {_color['primary']} !important;
-    border-radius: 50% !important;
-    width: 44px !important;
-    height: 44px !important;
-    min-width: 44px !important;
-    min-height: 44px !important;
-    box-shadow: 0 4px 14px rgba(8, 102, 233, 0.4) !important;
-    transition: all 0.2s ease !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}}
-[data-testid="stSidebarCollapseButton"] button:hover,
-[data-testid="stSidebarCollapseButton"] > div > button:hover {{
-    background: {_color['primary']} !important;
-    color: #FFFFFF !important;
-    transform: scale(1.08) !important;
-    box-shadow: 0 6px 20px rgba(8, 102, 233, 0.6) !important;
-}}
-[data-testid="stSidebarCollapseButton"] button svg,
-[data-testid="stSidebarCollapseButton"] > div > button svg {{
-    width: 22px !important;
-    height: 22px !important;
-    stroke-width: 2.5 !important;
+/* Ocultar el ícono SVG por defecto */
+[data-testid="stSidebarCollapsedControl"] button svg,
+[data-testid="stSidebarCollapsedControl"] > div > button svg {{
+    display: none !important;
 }}
 
-/* Botón para ABRIR la sidebar (cuando está cerrada) */
+/* Píldora azul con "☰ Menú" bien visible */
 [data-testid="stSidebarCollapsedControl"] {{
     position: fixed !important;
-    top: 16px !important;
-    left: 16px !important;
+    top: 14px !important;
+    left: 14px !important;
     z-index: 999999 !important;
 }}
 [data-testid="stSidebarCollapsedControl"] button,
 [data-testid="stSidebarCollapsedControl"] > div > button {{
+    width: auto !important;
+    min-width: 130px !important;
+    height: 48px !important;
+    padding: 0 20px !important;
+    border-radius: 30px !important;
     background: {_color['primary']} !important;
     color: #FFFFFF !important;
     border: 2px solid #FFFFFF !important;
-    border-radius: 50% !important;
-    width: 52px !important;
-    height: 52px !important;
-    min-width: 52px !important;
-    min-height: 52px !important;
-    box-shadow: 0 6px 20px rgba(8, 102, 233, 0.55) !important;
-    transition: all 0.2s ease !important;
+    box-shadow: 0 6px 20px rgba(8, 102, 233, 0.5) !important;
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    animation: pulse-toggle 2.4s infinite;
+    gap: 6px !important;
+    animation: pulse-menu 2.4s infinite !important;
+    transition: transform 0.2s ease, background 0.2s ease !important;
+}}
+[data-testid="stSidebarCollapsedControl"] button::before,
+[data-testid="stSidebarCollapsedControl"] > div > button::before {{
+    content: '☰  Menú';
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    color: #FFFFFF !important;
+}}
+[data-testid="stSidebarCollapsedControl"] button::after,
+[data-testid="stSidebarCollapsedControl"] > div > button::after {{
+    content: '▶';
+    font-size: 14px !important;
+    margin-left: 6px !important;
+    color: #FFFFFF !important;
 }}
 [data-testid="stSidebarCollapsedControl"] button:hover,
 [data-testid="stSidebarCollapsedControl"] > div > button:hover {{
     background: #0A75FF !important;
+    transform: scale(1.05) !important;
+    animation: none !important;
+}}
+
+@keyframes pulse-menu {{
+    0%, 100% {{ box-shadow: 0 6px 20px rgba(8, 102, 233, 0.5); }}
+    50%      {{ box-shadow: 0 6px 20px rgba(8, 102, 233, 0.5), 0 0 0 8px rgba(8, 102, 233, 0.18); }}
+}}
+
+/* ============================================================
+   ====== BOTÓN DE CERRAR (✕ grande y visible) ======
+   ============================================================ */
+[data-testid="stSidebarCollapseButton"] button svg,
+[data-testid="stSidebarCollapseButton"] > div > button svg {{
+    display: none !important;
+}}
+[data-testid="stSidebarCollapseButton"] button,
+[data-testid="stSidebarCollapseButton"] > div > button {{
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    border-radius: 50% !important;
+    background: #FFFFFF !important;
+    color: #071B49 !important;
+    border: 2px solid {_color['primary']} !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+}}
+[data-testid="stSidebarCollapseButton"] button::before,
+[data-testid="stSidebarCollapseButton"] > div > button::before {{
+    content: '✕';
+    font-size: 20px !important;
+    font-weight: 800 !important;
+    color: {_color['primary']} !important;
+    line-height: 1 !important;
+}}
+[data-testid="stSidebarCollapseButton"] button:hover,
+[data-testid="stSidebarCollapseButton"] > div > button:hover {{
+    background: {_color['primary']} !important;
     transform: scale(1.1) !important;
-    box-shadow: 0 8px 28px rgba(8, 102, 233, 0.7) !important;
-    animation: none;
 }}
-[data-testid="stSidebarCollapsedControl"] button svg,
-[data-testid="stSidebarCollapsedControl"] > div > button svg {{
-    width: 26px !important;
-    height: 26px !important;
-    stroke-width: 2.5 !important;
-}}
-
-@keyframes pulse-toggle {{
-    0%, 100% {{ box-shadow: 0 6px 20px rgba(8, 102, 233, 0.55); }}
-    50%      {{ box-shadow: 0 6px 20px rgba(8, 102, 233, 0.55), 0 0 0 8px rgba(8, 102, 233, 0.15); }}
-}}
-
-/* Tooltip de ayuda al pasar el mouse sobre el botón de abrir */
-[data-testid="stSidebarCollapsedControl"]::after {{
-    content: 'Menú';
-    position: absolute;
-    left: 60px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: {_color['primary']};
-    color: #FFFFFF;
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 700;
-    white-space: nowrap;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}}
-[data-testid="stSidebarCollapsedControl"]:hover::after {{
-    opacity: 1;
+[data-testid="stSidebarCollapseButton"] button:hover::before,
+[data-testid="stSidebarCollapseButton"] > div > button:hover::before {{
+    color: #FFFFFF !important;
 }}
 
 /* ============ SIDEBAR ============ */
@@ -177,7 +193,6 @@ section[data-testid="stSidebar"],
     background-image: none !important;
 }}
 [data-testid="stSidebar"] * {{ color: #E6EDFF !important; }}
-
 [data-testid="stSidebar"],
 section[data-testid="stSidebar"] {{
     width: 24vw !important;
@@ -202,22 +217,17 @@ section[data-testid="stSidebar"] {{
     width: 100px; height: 100px;
     border-radius: 16px;
     display: flex; align-items: center; justify-content: center;
-    overflow: hidden;
-    background: transparent;
+    overflow: hidden; background: transparent;
 }}
 .sidebar-brand h1 {{
     margin: 8px 0 0 0 !important;
-    font-size: 38px !important;
-    font-weight: 800 !important;
-    color: #FFFFFF !important;
-    letter-spacing: -1.5px !important;
+    font-size: 38px !important; font-weight: 800 !important;
+    color: #FFFFFF !important; letter-spacing: -1.5px !important;
     line-height: 1 !important;
 }}
 .sidebar-brand p {{
-    margin: 4px 0 0 0 !important;
-    font-size: 14px !important;
-    color: #8FA4CC !important;
-    font-weight: 500 !important;
+    margin: 4px 0 0 0 !important; font-size: 14px !important;
+    color: #8FA4CC !important; font-weight: 500 !important;
 }}
 
 .tipo-selector-label {{
@@ -232,12 +242,10 @@ section[data-testid="stSidebar"] {{
     display: flex; flex-direction: column;
 }}
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label {{
-    padding: 12px 14px !important;
-    border-radius: 8px !important;
+    padding: 12px 14px !important; border-radius: 8px !important;
     transition: all 0.2s ease;
     font-weight: 500 !important; font-size: 15px !important;
-    color: #B8C5E0 !important;
-    cursor: pointer;
+    color: #B8C5E0 !important; cursor: pointer;
     min-height: 44px;
 }}
 [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:hover {{
@@ -296,6 +304,7 @@ section[data-testid="stSidebar"] {{
     overflow: hidden;
     box-shadow: 0 20px 40px -20px rgba(7,27,73,0.5);
     transition: background 0.4s ease;
+    min-height: 140px;
 }}
 .hero-banner::before {{
     content: '';
@@ -429,7 +438,7 @@ section[data-testid="stSidebar"] {{
     font-weight: 700; font-size: 13px;
 }}
 
-/* ============ MÓVIL ============ */
+/* ============ MÓVIL: TODO VERTICAL Y ESTABLE ============ */
 @media (max-width: 768px) {{
     [data-testid="stHorizontalBlock"] {{ flex-direction: column !important; gap: 0 !important; }}
     [data-testid="stHorizontalBlock"] > [data-testid="column"],
@@ -457,12 +466,18 @@ section[data-testid="stSidebar"] {{
     .sidebar-brand h1 {{ font-size: 30px !important; letter-spacing: -1px !important; }}
     .sidebar-brand p {{ font-size: 13px !important; }}
 
-    .hero-banner {{ padding: 24px 20px !important; border-radius: 16px !important; margin-bottom: 16px !important; }}
+    .hero-banner {{
+        padding: 24px 20px !important;
+        border-radius: 16px !important;
+        margin-bottom: 16px !important;
+        margin-top: 64px !important;
+        min-height: 100px !important;
+    }}
     .hero-banner h1 {{ font-size: 22px !important; line-height: 1.2 !important; }}
     .hero-banner p  {{ font-size: 13px !important; }}
     .hero-banner::before {{ width: 200px; height: 200px; right: -60px; top: -60px; }}
 
-    .vl-card {{ padding: 14px 16px !important; border-radius: 14px !important; margin-bottom: 12px !important; }}
+    .vl-card {{ padding: 14px 16px !important; border-radius: 14px !important; margin-bottom: 12px !important; min-height: 60px !important; }}
     .vl-card h4 {{ font-size: 12px !important; margin-bottom: 8px !important; }}
     .vl-card h3 {{ font-size: 16px !important; }}
     .vl-card p  {{ font-size: 13px !important; }}
@@ -488,35 +503,49 @@ section[data-testid="stSidebar"] {{
     [data-testid="stAppViewContainer"] > .main > div {{
         padding-left: 1rem !important;
         padding-right: 1rem !important;
-        padding-top: 1rem !important;
+        padding-top: 3.5rem !important;
+        padding-bottom: 2rem !important;
     }}
 
     [data-testid="stTabs"] [data-baseweb="tab"] {{
         padding: 10px 14px !important; font-size: 14px !important;
     }}
 
-    /* Botón de abrir sidebar más pegado y grande en móvil */
+    /* Botón "☰ Menú" más grande en móvil */
     [data-testid="stSidebarCollapsedControl"] {{
-        top: 12px !important;
-        left: 12px !important;
+        top: 12px !important; left: 12px !important;
     }}
     [data-testid="stSidebarCollapsedControl"] button {{
-        width: 56px !important;
-        height: 56px !important;
-        min-width: 56px !important;
-        min-height: 56px !important;
+        min-width: 140px !important;
+        height: 52px !important;
+        font-size: 17px !important;
+    }}
+    [data-testid="stSidebarCollapsedControl"] button::before {{
+        content: '☰  Abrir menú' !important;
+        font-size: 17px !important;
     }}
 
-    /* Ajustar padding del hero para dejar espacio al botón */
-    .main .block-container {{ padding-top: 3.5rem !important; }}
+    /* Evitar overflow horizontal */
+    [data-testid="stAppViewContainer"] {{
+        overflow-x: hidden !important;
+    }}
+    * {{ max-width: 100vw; box-sizing: border-box; }}
 }}
 
 @media (max-width: 400px) {{
     .hero-banner h1 {{ font-size: 19px !important; }}
-    .hero-banner {{ padding: 20px 16px !important; }}
+    .hero-banner {{ padding: 20px 16px !important; margin-top: 68px !important; }}
     .vl-card {{ padding: 12px 14px !important; }}
     .sidebar-brand h1 {{ font-size: 26px !important; }}
     .sidebar-brand .logo {{ width: 60px !important; height: 60px !important; }}
+    [data-testid="stSidebarCollapsedControl"] button {{
+        min-width: 130px !important;
+        height: 48px !important;
+    }}
+    [data-testid="stSidebarCollapsedControl"] button::before {{
+        content: '☰  Menú' !important;
+        font-size: 15px !important;
+    }}
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -843,9 +872,6 @@ def planificar(origen, destino):
             if shared: transbordos.append((ra, rb, list(shared)[0]))
     return directas, transbordos, list(rutas_o) + list(rutas_d)
 
-# ============================================================
-# ALERTAS COMUNITARIAS
-# ============================================================
 if "alertas_locales" not in st.session_state:
     st.session_state.alertas_locales = [
         {
@@ -864,9 +890,6 @@ def publicar_alerta(autor, tipo, ruta, mensaje, severidad):
     st.session_state.alertas_locales.insert(0, alerta)
     return True
 
-# ============================================================
-# SESSION STATE
-# ============================================================
 if "current_view" not in st.session_state:
     st.session_state.current_view = "Inicio"
 if "selected_route" not in st.session_state:
@@ -881,9 +904,6 @@ if "chat_messages" not in st.session_state:
         ),
     }]
 
-# ============================================================
-# SIDEBAR
-# ============================================================
 MENU = [
     ("🏠", "Inicio"),
     ("🗺️", "Mapa en tiempo real"),
@@ -937,9 +957,6 @@ with st.sidebar:
             st.session_state.current_view = name
             st.rerun()
 
-# ============================================================
-# TOP BAR
-# ============================================================
 tb = st.columns([5, 1.6, 1.3, 0.7])
 with tb[0]:
     top_search = st.text_input(
@@ -967,9 +984,6 @@ if top_search:
                     st.session_state.current_view = "Inicio"
                     st.rerun()
 
-# ============================================================
-# VISTA: INICIO
-# ============================================================
 def render_inicio():
     st.markdown(
         """
@@ -1080,9 +1094,6 @@ def render_inicio():
         metro_html = "".join(f'<span class="vl-pill blue">{c}</span>' for c in metro_conn) or '<span class="vl-pill">Sin conexión</span>'
         st.markdown(f'<div class="vl-card"><h4>🚇 Conexión Metro</h4>{metro_html}</div>', unsafe_allow_html=True)
 
-# ============================================================
-# VISTA: MAPA
-# ============================================================
 def render_mapa():
     st.markdown('<div class="section-title">🗺️ Mapa en tiempo real</div>', unsafe_allow_html=True)
 
@@ -1122,9 +1133,6 @@ def render_mapa():
     st_folium(mapa, width=None, height=440, returned_objects=[])
     st.caption("Recorridos por calles reales vía OSRM. Sin GPS en tiempo real.")
 
-# ============================================================
-# VISTA: PLANIFICADOR
-# ============================================================
 def render_planificador():
     st.markdown('<div class="section-title">📍 Planificador de rutas</div>', unsafe_allow_html=True)
     st.caption("Escribe una calle, colonia o parada.")
@@ -1174,9 +1182,6 @@ def render_planificador():
         if not directas and not transbordos:
             st.warning("No encontramos conexión. Prueba otras palabras.")
 
-# ============================================================
-# VISTA: INFORMACIÓN DE LÍNEAS
-# ============================================================
 def render_lineas():
     st.markdown('<div class="section-title">🚌 Información de líneas</div>', unsafe_allow_html=True)
     tipo = st.session_state.tipo_transporte
@@ -1243,9 +1248,6 @@ def _render_tab_transmetro():
             st.session_state.current_view = "Mapa en tiempo real"
             st.rerun()
 
-# ============================================================
-# VISTA: NOTIFICACIONES
-# ============================================================
 def render_notificaciones():
     st.markdown('<div class="section-title">🔔 Notificaciones</div>', unsafe_allow_html=True)
     st.caption("Avisos e incidencias del servicio.")
@@ -1268,9 +1270,6 @@ def render_notificaciones():
     if st.button("Suscribirme a notificaciones", type="primary", use_container_width=True):
         st.success("Te has suscrito (prototipo).")
 
-# ============================================================
-# VISTA: ALERTAS COMUNITARIAS
-# ============================================================
 def render_alertas():
     st.markdown('<div class="section-title">🚨 Alertas Comunitarias</div>', unsafe_allow_html=True)
     st.caption("Comparte avisos útiles para otros usuarios.")
@@ -1332,9 +1331,6 @@ def render_alertas():
             unsafe_allow_html=True,
         )
 
-# ============================================================
-# VISTA: ASISTENTE IA
-# ============================================================
 def render_asistente():
     st.markdown('<div class="section-title">🤖 Asistente IA</div>', unsafe_allow_html=True)
     st.caption("Pregunta sobre rutas, paradas y Metro.")
@@ -1388,9 +1384,6 @@ def render_asistente():
             except Exception as e:
                 st.error(f"Error: {e}")
 
-# ============================================================
-# VISTA: CONFIGURACIÓN
-# ============================================================
 def render_configuracion():
     st.markdown('<div class="section-title">⚙️ Configuración</div>', unsafe_allow_html=True)
     st.markdown(
@@ -1399,7 +1392,7 @@ def render_configuracion():
             <h4>ℹ️ Acerca de Vialink</h4>
             <p>Prototipo de plataforma de movilidad para la Zona Metropolitana de Monterrey.</p>
             <p style="margin-top:8px;font-size:12px;color:#4A5A78;">
-                Versión 1.3 · Rutas, Metro y Transmetro · OSRM · Groq.
+                Versión 1.4 · Rutas, Metro y Transmetro · OSRM · Groq.
             </p>
         </div>
         """,
@@ -1415,9 +1408,6 @@ def render_configuracion():
         }]
         st.success("Conversación eliminada.")
 
-# ============================================================
-# ROUTER
-# ============================================================
 view = st.session_state.current_view
 if view == "Inicio": render_inicio()
 elif view == "Mapa en tiempo real": render_mapa()
