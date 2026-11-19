@@ -1,5 +1,5 @@
 # ============================================================
-# VIALINK · Versión optimizada para móvil
+# VIALINK · Versión móvil con sidebar toggle visible
 # ============================================================
 
 import streamlit as st
@@ -32,11 +32,11 @@ st.set_page_config(
     page_title="Vialink · Rutas de Apodaca",
     page_icon="assets/logo.png",
     layout="wide",
-    initial_sidebar_state="auto",  # auto-cierra en móvil
+    initial_sidebar_state="auto",
 )
 
 # ============================================================
-# SESSION STATE — Tipo de transporte
+# SESSION STATE
 # ============================================================
 if "tipo_transporte" not in st.session_state:
     st.session_state.tipo_transporte = "Todos"
@@ -51,7 +51,7 @@ TIPO_COLORES = {
 _color = TIPO_COLORES[st.session_state.tipo_transporte]
 
 # ============================================================
-# CSS GLOBAL (desktop + móvil)
+# CSS GLOBAL
 # ============================================================
 st.markdown(f"""
 <style>
@@ -61,6 +61,110 @@ html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
 #MainMenu, footer, [data-testid="stToolbar"] {{ visibility: hidden; height: 0; }}
 [data-testid="stDecoration"] {{ display: none; }}
 [data-testid="stHeader"] {{ background: transparent; height: 0; }}
+
+/* ============================================================
+   ============ BOTÓN DE SIDEBAR (ABRIR/CERRAR) ============
+   ============================================================ */
+
+/* Botón para CERRAR la sidebar (cuando está abierta) */
+[data-testid="stSidebarCollapseButton"] {{
+    position: relative !important;
+}}
+[data-testid="stSidebarCollapseButton"] button,
+[data-testid="stSidebarCollapseButton"] > div > button {{
+    background: #FFFFFF !important;
+    color: {_color['primary']} !important;
+    border: 2px solid {_color['primary']} !important;
+    border-radius: 50% !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    box-shadow: 0 4px 14px rgba(8, 102, 233, 0.4) !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}}
+[data-testid="stSidebarCollapseButton"] button:hover,
+[data-testid="stSidebarCollapseButton"] > div > button:hover {{
+    background: {_color['primary']} !important;
+    color: #FFFFFF !important;
+    transform: scale(1.08) !important;
+    box-shadow: 0 6px 20px rgba(8, 102, 233, 0.6) !important;
+}}
+[data-testid="stSidebarCollapseButton"] button svg,
+[data-testid="stSidebarCollapseButton"] > div > button svg {{
+    width: 22px !important;
+    height: 22px !important;
+    stroke-width: 2.5 !important;
+}}
+
+/* Botón para ABRIR la sidebar (cuando está cerrada) */
+[data-testid="stSidebarCollapsedControl"] {{
+    position: fixed !important;
+    top: 16px !important;
+    left: 16px !important;
+    z-index: 999999 !important;
+}}
+[data-testid="stSidebarCollapsedControl"] button,
+[data-testid="stSidebarCollapsedControl"] > div > button {{
+    background: {_color['primary']} !important;
+    color: #FFFFFF !important;
+    border: 2px solid #FFFFFF !important;
+    border-radius: 50% !important;
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    min-height: 52px !important;
+    box-shadow: 0 6px 20px rgba(8, 102, 233, 0.55) !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    animation: pulse-toggle 2.4s infinite;
+}}
+[data-testid="stSidebarCollapsedControl"] button:hover,
+[data-testid="stSidebarCollapsedControl"] > div > button:hover {{
+    background: #0A75FF !important;
+    transform: scale(1.1) !important;
+    box-shadow: 0 8px 28px rgba(8, 102, 233, 0.7) !important;
+    animation: none;
+}}
+[data-testid="stSidebarCollapsedControl"] button svg,
+[data-testid="stSidebarCollapsedControl"] > div > button svg {{
+    width: 26px !important;
+    height: 26px !important;
+    stroke-width: 2.5 !important;
+}}
+
+@keyframes pulse-toggle {{
+    0%, 100% {{ box-shadow: 0 6px 20px rgba(8, 102, 233, 0.55); }}
+    50%      {{ box-shadow: 0 6px 20px rgba(8, 102, 233, 0.55), 0 0 0 8px rgba(8, 102, 233, 0.15); }}
+}}
+
+/* Tooltip de ayuda al pasar el mouse sobre el botón de abrir */
+[data-testid="stSidebarCollapsedControl"]::after {{
+    content: 'Menú';
+    position: absolute;
+    left: 60px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: {_color['primary']};
+    color: #FFFFFF;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}}
+[data-testid="stSidebarCollapsedControl"]:hover::after {{
+    opacity: 1;
+}}
 
 /* ============ SIDEBAR ============ */
 [data-testid="stSidebar"],
@@ -179,6 +283,7 @@ section[data-testid="stSidebar"] {{
     box-shadow: 0 6px 20px rgba(8, 102, 233, 0.45) !important;
 }}
 
+/* ============ HERO BANNER ============ */
 .hero-banner {{
     position: relative;
     background:
@@ -324,24 +429,15 @@ section[data-testid="stSidebar"] {{
     font-weight: 700; font-size: 13px;
 }}
 
-/* ============================================================
-   ============ OPTIMIZACIÓN MÓVIL ============
-   ============================================================ */
+/* ============ MÓVIL ============ */
 @media (max-width: 768px) {{
-    /* Apilar columnas verticalmente */
-    [data-testid="stHorizontalBlock"] {{
-        flex-direction: column !important;
-        gap: 0 !important;
-    }}
+    [data-testid="stHorizontalBlock"] {{ flex-direction: column !important; gap: 0 !important; }}
     [data-testid="stHorizontalBlock"] > [data-testid="column"],
     [data-testid="column"] {{
-        width: 100% !important;
-        flex: 1 1 100% !important;
-        min-width: 100% !important;
-        margin-bottom: 8px !important;
+        width: 100% !important; flex: 1 1 100% !important;
+        min-width: 100% !important; margin-bottom: 8px !important;
     }}
 
-    /* Sidebar ocupa más ancho al abrirse en móvil */
     [data-testid="stSidebar"],
     section[data-testid="stSidebar"] {{
         width: 85vw !important;
@@ -356,79 +452,38 @@ section[data-testid="stSidebar"] {{
         max-width: 85vw !important;
     }}
 
-    /* Logo y título compactos */
     .sidebar-brand {{ padding: 14px 6px 18px 6px; gap: 8px; }}
-    .sidebar-brand .logo {{
-        width: 70px !important;
-        height: 70px !important;
-        border-radius: 14px;
-    }}
-    .sidebar-brand h1 {{
-        font-size: 30px !important;
-        letter-spacing: -1px !important;
-    }}
+    .sidebar-brand .logo {{ width: 70px !important; height: 70px !important; border-radius: 14px; }}
+    .sidebar-brand h1 {{ font-size: 30px !important; letter-spacing: -1px !important; }}
     .sidebar-brand p {{ font-size: 13px !important; }}
 
-    /* Banner compacto */
-    .hero-banner {{
-        padding: 24px 20px !important;
-        border-radius: 16px !important;
-        margin-bottom: 16px !important;
-    }}
+    .hero-banner {{ padding: 24px 20px !important; border-radius: 16px !important; margin-bottom: 16px !important; }}
     .hero-banner h1 {{ font-size: 22px !important; line-height: 1.2 !important; }}
     .hero-banner p  {{ font-size: 13px !important; }}
     .hero-banner::before {{ width: 200px; height: 200px; right: -60px; top: -60px; }}
 
-    /* Tarjetas compactas */
-    .vl-card {{
-        padding: 14px 16px !important;
-        border-radius: 14px !important;
-        margin-bottom: 12px !important;
-    }}
+    .vl-card {{ padding: 14px 16px !important; border-radius: 14px !important; margin-bottom: 12px !important; }}
     .vl-card h4 {{ font-size: 12px !important; margin-bottom: 8px !important; }}
     .vl-card h3 {{ font-size: 16px !important; }}
     .vl-card p  {{ font-size: 13px !important; }}
     .vl-card .value {{ font-size: 18px !important; }}
     .vl-card .label {{ font-size: 10px !important; }}
 
-    /* Títulos de sección compactos */
     .section-title {{ font-size: 18px !important; margin: 4px 0 10px 0 !important; }}
 
-    /* Topbar compacto */
-    .topbar-loc, .topbar-prof {{
-        height: 40px !important;
-        font-size: 12px !important;
-    }}
+    .topbar-loc, .topbar-prof {{ height: 40px !important; font-size: 12px !important; }}
     .topbar-prof {{ width: 40px !important; font-size: 14px !important; }}
     .tipo-badge {{ padding: 6px 10px !important; font-size: 12px !important; }}
 
-    /* Pills compactas */
     .vl-pill {{ font-size: 11px !important; padding: 4px 10px !important; }}
 
-    /* Burbujas de chat más anchas */
-    .chat-bubble-user, .chat-bubble-ai {{
-        max-width: 90% !important;
-        font-size: 13px !important;
-    }}
+    .chat-bubble-user, .chat-bubble-ai {{ max-width: 90% !important; font-size: 13px !important; }}
 
-    /* Inputs táctiles más altos */
-    [data-testid="stTextInput"] input {{
-        font-size: 16px !important;  /* evita zoom en iOS */
-        height: 44px !important;
-    }}
-    [data-testid="stSelectbox"] > div > div {{
-        font-size: 15px !important;
-        min-height: 44px !important;
-    }}
+    [data-testid="stTextInput"] input {{ font-size: 16px !important; height: 44px !important; }}
+    [data-testid="stSelectbox"] > div > div {{ font-size: 15px !important; min-height: 44px !important; }}
 
-    /* Botones grandes táctiles */
-    .stButton > button {{
-        min-height: 44px !important;
-        font-size: 14px !important;
-        padding: 10px 14px !important;
-    }}
+    .stButton > button {{ min-height: 44px !important; font-size: 14px !important; padding: 10px 14px !important; }}
 
-    /* Padding general de la app más compacto */
     .main .block-container,
     [data-testid="stAppViewContainer"] > .main > div {{
         padding-left: 1rem !important;
@@ -436,16 +491,26 @@ section[data-testid="stSidebar"] {{
         padding-top: 1rem !important;
     }}
 
-    /* Tabs más táctiles */
     [data-testid="stTabs"] [data-baseweb="tab"] {{
-        padding: 10px 14px !important;
-        font-size: 14px !important;
+        padding: 10px 14px !important; font-size: 14px !important;
     }}
+
+    /* Botón de abrir sidebar más pegado y grande en móvil */
+    [data-testid="stSidebarCollapsedControl"] {{
+        top: 12px !important;
+        left: 12px !important;
+    }}
+    [data-testid="stSidebarCollapsedControl"] button {{
+        width: 56px !important;
+        height: 56px !important;
+        min-width: 56px !important;
+        min-height: 56px !important;
+    }}
+
+    /* Ajustar padding del hero para dejar espacio al botón */
+    .main .block-container {{ padding-top: 3.5rem !important; }}
 }}
 
-/* ============================================================
-   ============ MÓVIL MUY PEQUEÑO (<= 400px) ============
-   ============================================================ */
 @media (max-width: 400px) {{
     .hero-banner h1 {{ font-size: 19px !important; }}
     .hero-banner {{ padding: 20px 16px !important; }}
@@ -457,7 +522,7 @@ section[data-testid="stSidebar"] {{
 """, unsafe_allow_html=True)
 
 # ============================================================
-# DATOS — RUTAS (camiones)
+# DATOS
 # ============================================================
 RUTAS = {
     "1 · Directa Pilares Andalucía UTE": {
@@ -537,9 +602,6 @@ RUTAS = {
     },
 }
 
-# ============================================================
-# METRO
-# ============================================================
 METRO = {
     "Línea 1 · Talleres / San Bernabé": {
         "color": "#1D4ED8",
@@ -578,9 +640,6 @@ METRO = {
     },
 }
 
-# ============================================================
-# TRANSMETRO
-# ============================================================
 TRANSMETRO = {
     "Transmetro L1 · Talleres - Centro": {
         "color": "#DC2626",
@@ -623,7 +682,7 @@ TRANSMETRO = {
 }
 
 # ============================================================
-# HELPERS DE CATÁLOGO Y TIPO
+# HELPERS
 # ============================================================
 def catalogo_por_tipo(tipo):
     if tipo == "Camión": return dict(RUTAS)
@@ -648,9 +707,6 @@ def primer_nombre(tipo):
     cat = catalogo_por_tipo(tipo)
     return list(cat.keys())[0] if cat else None
 
-# ============================================================
-# OSRM
-# ============================================================
 @st.cache_data(show_spinner=False)
 def obtener_ruta_por_calles(paradas_tuple):
     coordenadas_osrm = ";".join([f"{lon},{lat}" for lat, lon in paradas_tuple])
@@ -667,9 +723,6 @@ def obtener_ruta_por_calles(paradas_tuple):
             time.sleep(1)
     return None
 
-# ============================================================
-# MAPAS
-# ============================================================
 def crear_mapa_base(zoom=12, centro=(25.740, -100.220)):
     return folium.Map(location=list(centro), zoom_start=zoom, tiles="OpenStreetMap")
 
@@ -710,9 +763,6 @@ def dibujar_ruta_generica(mapa, nombre):
     elif nombre in TRANSMETRO: agregar_ruta_al_mapa(mapa, nombre, TRANSMETRO[nombre])
     elif nombre in RUTAS: agregar_ruta_al_mapa(mapa, nombre, RUTAS[nombre])
 
-# ============================================================
-# HERRAMIENTAS DEL CHATBOT
-# ============================================================
 def buscar_ruta_por_nombre(nombre_ruta: str) -> str:
     resultados = []
     for nombre, d in {**RUTAS, **TRANSMETRO}.items():
@@ -730,8 +780,7 @@ def buscar_ruta_por_parada(parada: str) -> str:
 
 def obtener_info_metro(linea: str) -> str:
     resultados = [
-        f"**{nombre}**\n- Estaciones: {', '.join(e['nombre'] for e in d['estaciones'])}\n"
-        f"- Conexión Apodaca: {d['conexion_apodaca']}"
+        f"**{nombre}**\n- Estaciones: {', '.join(e['nombre'] for e in d['estaciones'])}\n- Conexión Apodaca: {d['conexion_apodaca']}"
         for nombre, d in METRO.items() if linea.lower() in nombre.lower()
     ]
     return "\n\n".join(resultados) if resultados else "No encontré esa línea del metro."
@@ -758,9 +807,6 @@ def ejecutar_herramienta(nombre, args):
     if nombre == "listar_lineas_metro":   return listar_lineas_metro()
     return "Función no reconocida."
 
-# ============================================================
-# HELPERS
-# ============================================================
 def get_metro_connections(route_data):
     found = []
     for nombre_linea, datos in METRO.items():
@@ -805,8 +851,7 @@ if "alertas_locales" not in st.session_state:
         {
             "autor": "Sistema Vialink", "tipo": "Otro", "ruta": "General",
             "mensaje": "Bienvenido al foro comunitario. Aquí puedes reportar retrasos, cambios de recorrido o cualquier aviso útil.",
-            "severidad": "Baja",
-            "created_at": time.strftime("%Y-%m-%d %H:%M"),
+            "severidad": "Baja", "created_at": time.strftime("%Y-%m-%d %H:%M"),
         }
     ]
 
@@ -832,8 +877,7 @@ if "chat_messages" not in st.session_state:
         "content": (
             "Eres Vialink IA, un asistente experto en transporte público de la Zona Metropolitana de Monterrey. "
             "Puedes consultar rutas de camión, líneas de Transmetro y líneas de Metro. "
-            "Usa SIEMPRE las herramientas disponibles antes de responder; no inventes rutas ni horarios. "
-            "Responde en español, claro y amable."
+            "Usa SIEMPRE las herramientas disponibles antes de responder."
         ),
     }]
 
@@ -1000,7 +1044,6 @@ def render_inicio():
         mapa = crear_mapa_base(zoom=11)
         with st.spinner("Calculando recorrido..."):
             dibujar_ruta_generica(mapa, st.session_state.selected_route)
-        # Altura reducida para móvil
         st_folium(mapa, width=None, height=380, returned_objects=[])
 
     with col_right:
@@ -1356,7 +1399,7 @@ def render_configuracion():
             <h4>ℹ️ Acerca de Vialink</h4>
             <p>Prototipo de plataforma de movilidad para la Zona Metropolitana de Monterrey.</p>
             <p style="margin-top:8px;font-size:12px;color:#4A5A78;">
-                Versión 1.2 · Rutas, Metro y Transmetro · OSRM · Groq.
+                Versión 1.3 · Rutas, Metro y Transmetro · OSRM · Groq.
             </p>
         </div>
         """,
