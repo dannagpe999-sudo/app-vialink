@@ -1,5 +1,5 @@
 # ============================================================
-# VIALINK · Con botón hamburguesa flotante siempre visible
+# VIALINK · Con botón nativo funcionando en PC y móvil
 # ============================================================
 
 import streamlit as st
@@ -12,7 +12,6 @@ import json
 from openai import OpenAI
 import base64
 from pathlib import Path
-import streamlit.components.v1 as components
 
 def cargar_logo_base64(ruta="assets/logo.png"):
     try:
@@ -54,10 +53,85 @@ html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
 [data-testid="stDecoration"] {{ display: none; }}
 [data-testid="stHeader"] {{ background: transparent; height: 0; }}
 
-/* Ocultar los botones nativos de Streamlit (los reemplazamos con el nuestro) */
-[data-testid="stSidebarCollapsedControl"],
-[data-testid="stSidebarCollapseButton"] {{
+/* ============================================================
+   ============ BOTÓN ABRIR (☰ hamburguesa) ============
+   ============================================================ */
+[data-testid="stSidebarCollapsedControl"] {{
+    position: fixed !important;
+    top: 16px !important;
+    left: 16px !important;
+    z-index: 9999999 !important;
+}}
+[data-testid="stSidebarCollapsedControl"] button {{
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    min-height: 52px !important;
+    background: {_color['primary']} !important;
+    color: #FFFFFF !important;
+    border: 2px solid #FFFFFF !important;
+    border-radius: 14px !important;
+    box-shadow: 0 4px 16px rgba(8,102,233,0.5) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+    padding: 0 !important;
+}}
+[data-testid="stSidebarCollapsedControl"] button:hover {{
+    background: {_color['primary']}DD !important;
+    transform: scale(1.08) !important;
+}}
+[data-testid="stSidebarCollapsedControl"] button svg {{
     display: none !important;
+}}
+[data-testid="stSidebarCollapsedControl"] button::before {{
+    content: '☰';
+    font-size: 28px !important;
+    color: #FFFFFF !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+}}
+
+/* ============================================================
+   ============ BOTÓN CERRAR (✕) ============
+   ============================================================ */
+[data-testid="stSidebarCollapseButton"] {{
+    position: fixed !important;
+    top: 16px !important;
+    left: 16px !important;
+    z-index: 9999999 !important;
+}}
+[data-testid="stSidebarCollapseButton"] button {{
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    background: #FFFFFF !important;
+    color: {_color['primary']} !important;
+    border: 2px solid {_color['primary']} !important;
+    border-radius: 50% !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+    padding: 0 !important;
+}}
+[data-testid="stSidebarCollapseButton"] button:hover {{
+    background: {_color['primary']} !important;
+    color: #FFFFFF !important;
+    transform: scale(1.08) !important;
+}}
+[data-testid="stSidebarCollapseButton"] button svg {{
+    display: none !important;
+}}
+[data-testid="stSidebarCollapseButton"] button::before {{
+    content: '✕';
+    font-size: 20px !important;
+    font-weight: 900 !important;
+    color: inherit !important;
+    line-height: 1 !important;
 }}
 
 /* Estabilidad de layout */
@@ -96,7 +170,7 @@ section[data-testid="stSidebar"] {{
     gap: 10px; padding: 20px 8px 26px 8px;
     border-bottom: 1px solid rgba(255,255,255,0.1);
     margin-bottom: 18px;
-    margin-top: 56px;
+    margin-top: 72px;
 }}
 .sidebar-brand .logo {{
     width: 100px; height: 100px;
@@ -346,7 +420,7 @@ section[data-testid="stSidebar"] {{
         max-width: 85vw !important;
     }}
 
-    .sidebar-brand {{ padding: 14px 6px 18px 6px; gap: 8px; margin-top: 60px; }}
+    .sidebar-brand {{ padding: 14px 6px 18px 6px; gap: 8px; margin-top: 72px; }}
     .sidebar-brand .logo {{ width: 70px !important; height: 70px !important; border-radius: 14px; }}
     .sidebar-brand h1 {{ font-size: 30px !important; letter-spacing: -1px !important; }}
     .sidebar-brand p {{ font-size: 13px !important; }}
@@ -355,7 +429,7 @@ section[data-testid="stSidebar"] {{
         padding: 24px 20px !important;
         border-radius: 16px !important;
         margin-bottom: 16px !important;
-        margin-top: 66px !important;
+        margin-top: 70px !important;
         min-height: 100px !important;
     }}
     .hero-banner h1 {{ font-size: 22px !important; line-height: 1.2 !important; }}
@@ -388,7 +462,7 @@ section[data-testid="stSidebar"] {{
     [data-testid="stAppViewContainer"] > .main > div {{
         padding-left: 1rem !important;
         padding-right: 1rem !important;
-        padding-top: 4rem !important;
+        padding-top: 4.5rem !important;
         padding-bottom: 2rem !important;
     }}
 
@@ -398,127 +472,30 @@ section[data-testid="stSidebar"] {{
 
     [data-testid="stAppViewContainer"] {{ overflow-x: hidden !important; }}
     * {{ max-width: 100vw; box-sizing: border-box; }}
+
+    /* Botones más grandes en móvil */
+    [data-testid="stSidebarCollapsedControl"] {{ top: 12px !important; left: 12px !important; }}
+    [data-testid="stSidebarCollapsedControl"] button {{
+        width: 54px !important;
+        height: 54px !important;
+        min-width: 54px !important;
+        min-height: 54px !important;
+    }}
+    [data-testid="stSidebarCollapsedControl"] button::before {{
+        font-size: 30px !important;
+    }}
+    [data-testid="stSidebarCollapseButton"] {{ top: 12px !important; left: 12px !important; }}
 }}
 
 @media (max-width: 400px) {{
     .hero-banner h1 {{ font-size: 19px !important; }}
-    .hero-banner {{ padding: 20px 16px !important; margin-top: 70px !important; }}
+    .hero-banner {{ padding: 20px 16px !important; margin-top: 74px !important; }}
     .vl-card {{ padding: 12px 14px !important; }}
     .sidebar-brand h1 {{ font-size: 26px !important; }}
     .sidebar-brand .logo {{ width: 60px !important; height: 60px !important; }}
 }}
 </style>
 """, unsafe_allow_html=True)
-
-# ============================================================
-# BOTÓN HAMBURGUESA FLOTANTE (inyectado en el documento padre)
-# ============================================================
-components.html(f"""
-<script>
-(function() {{
-    const parentDoc = window.parent.document;
-    const PRIMARY = "{_color['primary']}";
-    const PRIMARY_HOVER = "{_color['primary']}DD";
-
-    // Solo inyectar una vez
-    if (parentDoc.getElementById('vl-hamburger-btn')) return;
-
-    // Estilos
-    const style = parentDoc.createElement('style');
-    style.textContent = `
-        #vl-hamburger-btn {{
-            position: fixed !important;
-            top: 16px !important;
-            left: 16px !important;
-            width: 52px !important;
-            height: 52px !important;
-            background: ${{PRIMARY}} !important;
-            border-radius: 14px !important;
-            border: 2px solid white !important;
-            cursor: pointer !important;
-            z-index: 9999999 !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: center !important;
-            align-items: center !important;
-            gap: 5px !important;
-            box-shadow: 0 4px 16px rgba(8,102,233,0.5) !important;
-            transition: all 0.25s ease !important;
-            padding: 0 !important;
-            outline: none !important;
-            -webkit-tap-highlight-color: transparent !important;
-        }}
-        #vl-hamburger-btn:hover {{
-            background: ${{PRIMARY_HOVER}} !important;
-            transform: scale(1.08) !important;
-            box-shadow: 0 6px 22px rgba(8,102,233,0.7) !important;
-        }}
-        #vl-hamburger-btn:active {{
-            transform: scale(0.96) !important;
-        }}
-        #vl-hamburger-btn span {{
-            display: block !important;
-            width: 24px !important;
-            height: 3px !important;
-            background: white !important;
-            border-radius: 2px !important;
-            transition: all 0.3s ease !important;
-            pointer-events: none !important;
-        }}
-        #vl-hamburger-btn.open span:nth-child(1) {{
-            transform: translateY(8px) rotate(45deg) !important;
-        }}
-        #vl-hamburger-btn.open span:nth-child(2) {{
-            opacity: 0 !important;
-            transform: scaleX(0) !important;
-        }}
-        #vl-hamburger-btn.open span:nth-child(3) {{
-            transform: translateY(-8px) rotate(-45deg) !important;
-        }}
-        @media (max-width: 768px) {{
-            #vl-hamburger-btn {{
-                top: 12px !important;
-                left: 12px !important;
-                width: 54px !important;
-                height: 54px !important;
-                border-radius: 14px !important;
-            }}
-            #vl-hamburger-btn span {{
-                width: 26px !important;
-                height: 3px !important;
-            }}
-            #vl-hamburger-btn.open span:nth-child(1) {{
-                transform: translateY(8px) rotate(45deg) !important;
-            }}
-            #vl-hamburger-btn.open span:nth-child(3) {{
-                transform: translateY(-8px) rotate(-45deg) !important;
-            }}
-        }}
-    `;
-    parentDoc.head.appendChild(style);
-
-    // Botón
-    const btn = parentDoc.createElement('button');
-    btn.id = 'vl-hamburger-btn';
-    btn.setAttribute('aria-label', 'Abrir menú');
-    btn.innerHTML = '<span></span><span></span><span></span>';
-
-    btn.addEventListener('click', function(e) {{
-        e.stopPropagation();
-        // Buscar el toggle nativo (oculto con CSS)
-        const toggle =
-            parentDoc.querySelector('[data-testid="stSidebarCollapsedControl"] button') ||
-            parentDoc.querySelector('[data-testid="stSidebarCollapseButton"] button');
-        if (toggle) {{
-            toggle.click();
-            btn.classList.toggle('open');
-        }}
-    }});
-
-    parentDoc.body.appendChild(btn);
-}})();
-</script>
-""", height=0)
 
 # ============================================================
 # DATOS
@@ -1362,7 +1339,7 @@ def render_configuracion():
             <h4>ℹ️ Acerca de Vialink</h4>
             <p>Prototipo de plataforma de movilidad para la Zona Metropolitana de Monterrey.</p>
             <p style="margin-top:8px;font-size:12px;color:#4A5A78;">
-                Versión 1.5 · Botón hamburguesa flotante · Rutas, Metro y Transmetro.
+                Versión 1.6 · Botón nativo · Rutas, Metro y Transmetro.
             </p>
         </div>
         """,
